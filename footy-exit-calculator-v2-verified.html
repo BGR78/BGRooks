@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Footy Exit Calculator</title>
+  <style>
+    :root {
+      --bg: #f6f7fb;
+      --card: #ffffff;
+      --text: #1f2933;
+      --muted: #5f6b7a;
+      --border: #d9dee7;
+      --accent: #b40000;
+      --accent-dark: #870000;
+      --good: #e5f6e8;
+      --bad: #fde6e6;
+      --draw: #fff3cd;
+      --shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.45;
+      transition: background-color 0.4s ease;
+    }
+
+    body.chance-strong {
+      background: #e8f6ed;
+    }
+
+    body.chance-live {
+      background: #f4f7fb;
+    }
+
+    body.chance-danger {
+      background: #fff4d6;
+    }
+
+    body.chance-grim {
+      background: #ffe8e8;
+    }
+
+    body.lost-cause {
+      background: #ffd1d1;
+    }
+
+    body.lost-cause.flashing {
+      animation: lostCauseFlash 1.1s infinite;
+    }
+
+    @keyframes lostCauseFlash {
+      0%, 100% { background-color: #ffd1d1; }
+      50% { background-color: #fff1f1; }
+    }
+
+    .page {
+      width: min(1100px, 100%);
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    header {
+      margin-bottom: 18px;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: clamp(1.7rem, 4vw, 2.5rem);
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+
+    .input-card {
+      position: sticky;
+      top: 16px;
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      font-size: 1.25rem;
+    }
+
+    h3 {
+      margin: 20px 0 10px;
+      font-size: 1.05rem;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    label {
+      display: block;
+      font-weight: 700;
+      font-size: 0.92rem;
+      margin-bottom: 5px;
+    }
+
+    input,
+    select,
+    button {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 11px 12px;
+      font-size: 1rem;
+      background: #fff;
+      color: var(--text);
+    }
+
+    input:focus,
+    select:focus {
+      outline: 3px solid rgba(180, 0, 0, 0.15);
+      border-color: var(--accent);
+    }
+
+    button {
+      margin-top: 18px;
+      border: none;
+      background: var(--accent);
+      color: white;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: var(--accent-dark);
+    }
+
+    .hint {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .score-block {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .metric {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 13px;
+      background: #fbfcff;
+    }
+
+    .metric .label {
+      color: var(--muted);
+      font-size: 0.86rem;
+      margin-bottom: 5px;
+    }
+
+    .metric .value {
+      font-size: 1.25rem;
+      font-weight: 800;
+    }
+
+    .pro-rata {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .team-result {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      background: #fbfcff;
+    }
+
+    .team-name {
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .big-score {
+      font-size: 2rem;
+      font-weight: 900;
+      margin: 6px 0;
+    }
+
+    .range-card {
+      margin-top: 12px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      background: #fbfcff;
+    }
+
+    .range-title {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+
+    .bar-wrap {
+      position: relative;
+      height: 28px;
+      background: #eef1f6;
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: 10px;
+    }
+
+    .bar-extreme,
+    .bar-quartile {
+      position: absolute;
+      top: 0;
+      height: 100%;
+    }
+
+    .bar-extreme {
+      background: rgba(31, 41, 51, 0.18);
+    }
+
+    .bar-quartile {
+      background: rgba(180, 0, 0, 0.45);
+    }
+
+    .bar-pro-rata {
+      position: absolute;
+      top: 0;
+      width: 4px;
+      height: 100%;
+      background: #111827;
+      transform: translateX(-2px);
+    }
+
+    .split-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .split-box {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      background: #fbfcff;
+    }
+
+    .split-box h3 {
+      margin: 0;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      background: #f8fafc;
+    }
+
+    .split-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .split-row:last-child {
+      border-bottom: none;
+    }
+
+    .win {
+      background: var(--good);
+    }
+
+    .loss {
+      background: var(--bad);
+    }
+
+    .draw {
+      background: var(--draw);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      overflow: hidden;
+      border-radius: 12px;
+      font-size: 0.94rem;
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid var(--border);
+      padding: 10px 9px;
+      text-align: right;
+      vertical-align: top;
+    }
+
+    th:first-child,
+    td:first-child {
+      text-align: left;
+    }
+
+    th {
+      background: #f8fafc;
+      color: #344054;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    .status-banner {
+      margin: 0 0 16px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      padding: 14px;
+      font-weight: 800;
+    }
+
+    .status-banner.strong {
+      background: #dff3e6;
+      border-color: #9dd8ad;
+    }
+
+    .status-banner.live {
+      background: #eef3fb;
+      border-color: #cdd8ea;
+    }
+
+    .status-banner.danger {
+      background: #fff0c2;
+      border-color: #e8c767;
+    }
+
+    .status-banner.grim,
+    .status-banner.lost {
+      background: #ffdada;
+      border-color: #e8a0a0;
+    }
+
+    .result-note {
+      color: var(--muted);
+      font-size: 0.85rem;
+      margin-top: 8px;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .error {
+      background: #fff3cd;
+      border: 1px solid #f6d365;
+      border-radius: 14px;
+      padding: 14px;
+      font-weight: 700;
+    }
+
+    @media (max-width: 900px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .input-card {
+        position: static;
+      }
+
+      .summary-grid,
+      .pro-rata,
+      .split-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .page {
+        padding: 14px;
+      }
+
+      .grid-2 {
+        grid-template-columns: 1fr;
+      }
+
+      table {
+        font-size: 0.86rem;
+      }
+
+      th,
+      td {
+        padding: 8px 6px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <h1>Footy Exit Calculator</h1>
+      <p class="subtitle">A private, guesstimate-driven scenario model for when the game is getting grim.</p>
+      <p class="subtitle"><strong>Verified v2.1:</strong> weighted background states, quartile lost-cause flag, and flashing lost-cause state included.</p>
+    </header>
+
+    <main class="layout">
+      <section class="card input-card">
+        <h2>Match inputs</h2>
+
+        <div class="grid-2">
+          <div>
+            <label for="quarter">Quarter</label>
+            <select id="quarter">
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3" selected>3</option>
+              <option value="4">4</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="timePlayedQuarter">Time played this quarter</label>
+            <input id="timePlayedQuarter" type="number" min="0" step="0.1" value="12.5" />
+          </div>
+        </div>
+
+        <p class="hint">Enter 4 minutes 30 seconds as 4.5.</p>
+
+        <div class="score-block">
+          <h3>Essendon</h3>
+          <div class="grid-2">
+            <div>
+              <label for="essGoals">Goals</label>
+              <input id="essGoals" type="number" min="0" step="1" value="6" />
+            </div>
+            <div>
+              <label for="essBehinds">Behinds</label>
+              <input id="essBehinds" type="number" min="0" step="1" value="7" />
+            </div>
+          </div>
+        </div>
+
+        <div class="score-block">
+          <h3>Opponent</h3>
+          <div class="grid-2">
+            <div>
+              <label for="oppGoals">Goals</label>
+              <input id="oppGoals" type="number" min="0" step="1" value="10" />
+            </div>
+            <div>
+              <label for="oppBehinds">Behinds</label>
+              <input id="oppBehinds" type="number" min="0" step="1" value="8" />
+            </div>
+          </div>
+        </div>
+
+        <button id="calculateBtn" type="button">Calculate</button>
+        <p class="hint">Model uses 32.175 minutes per quarter, 128.7 minutes total.</p>
+      </section>
+
+      <section>
+        <div id="errorBox" class="error hidden"></div>
+
+        <section id="results" class="card hidden">
+          <h2>Results</h2>
+          <div id="statusBanner" class="status-banner hidden"></div>
+
+          <div class="summary-grid" id="currentState"></div>
+
+          <h3>Pro-rata result</h3>
+          <div class="pro-rata" id="proRataResult"></div>
+
+          <h3>Ranges</h3>
+          <div id="rangeResults"></div>
+
+          <h3>Scenario split</h3>
+          <div class="split-grid" id="splitResults"></div>
+
+          <h3>Scenario table</h3>
+          <div id="scenarioTable"></div>
+          <p class="result-note">Weighted split is a modelled scenario share, not a true probability.</p>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const QUARTER_LENGTH = 32.175;
+    const GAME_LENGTH = QUARTER_LENGTH * 4;
+
+    const WEIGHTS = {
+      lowC: 0.05,
+      lowB: 0.12,
+      lowA: 0.12,
+      proRata: 0.43,
+      highA: 0.11,
+      highB: 0.12,
+      highC: 0.05
+    };
+
+    const SCENARIOS = [
+      { key: "lowC", label: "Low C", type: "low" },
+      { key: "lowB", label: "Low B", type: "low" },
+      { key: "lowA", label: "Low A", type: "low" },
+      { key: "proRata", label: "Pro-rata", type: "pro" },
+      { key: "highA", label: "High A", type: "high" },
+      { key: "highB", label: "High B", type: "high" },
+      { key: "highC", label: "High C", type: "high" }
+    ];
+
+    const ids = [
+      "quarter",
+      "timePlayedQuarter",
+      "essGoals",
+      "essBehinds",
+      "oppGoals",
+      "oppBehinds"
+    ];
+
+    ids.forEach(id => {
+      document.getElementById(id).addEventListener("input", calculate);
+      document.getElementById(id).addEventListener("change", calculate);
+    });
+    document.getElementById("calculateBtn").addEventListener("click", calculate);
+
+    function num(id) {
+      return Number(document.getElementById(id).value);
+    }
+
+    function score(goals, behinds) {
+      return goals * 6 + behinds;
+    }
+
+    function formatScore(result) {
+      return `${result.goals}.${result.behinds}.${result.points}`;
+    }
+
+    function roundByType(value, type) {
+      if (type === "low") return Math.floor(value);
+      if (type === "high") return Math.ceil(value);
+      return Math.round(value);
+    }
+
+    function makeResult(goals, behinds, type) {
+      const roundedGoals = roundByType(goals, type);
+      const roundedBehinds = roundByType(behinds, type);
+      return {
+        goals: roundedGoals,
+        behinds: roundedBehinds,
+        points: score(roundedGoals, roundedBehinds)
+      };
+    }
+
+    function calculateTeamScenarios(team, match, minutesPlayed, minutesRemaining) {
+      const teamGoalRate = team.goals / minutesPlayed;
+      const teamBehindRate = team.behinds / minutesPlayed;
+      const totalGoalRate = match.totalGoals / minutesPlayed;
+      const totalBehindRate = match.totalBehinds / minutesPlayed;
+
+      const teamRemainingGoals = teamGoalRate * minutesRemaining;
+      const teamRemainingBehinds = teamBehindRate * minutesRemaining;
+      const totalRemainingGoals = totalGoalRate * minutesRemaining;
+      const totalRemainingBehinds = totalBehindRate * minutesRemaining;
+
+      return {
+        lowC: makeResult(team.goals, team.behinds + totalRemainingBehinds, "low"),
+        lowB: makeResult(team.goals, team.behinds + teamRemainingGoals + teamRemainingBehinds, "low"),
+        lowA: makeResult(team.goals + teamRemainingGoals / 2, team.behinds + teamRemainingBehinds / 2, "low"),
+        proRata: makeResult(team.goals + teamRemainingGoals, team.behinds + teamRemainingBehinds, "pro"),
+        highA: makeResult(team.goals + teamRemainingGoals * 2, team.behinds + teamRemainingBehinds * 2, "high"),
+        highB: makeResult(team.goals + teamRemainingGoals + teamRemainingBehinds, team.behinds, "high"),
+        highC: makeResult(team.goals + totalRemainingGoals, team.behinds, "high")
+      };
+    }
+
+    function ordinalSortedPoints(results) {
+      return SCENARIOS.map(s => results[s.key].points).sort((a, b) => a - b);
+    }
+
+    function summariseRange(results) {
+      const values = ordinalSortedPoints(results);
+      return {
+        min: values[0],
+        lowerQuartile: (values[1] + values[2]) / 2,
+        median: values[3],
+        upperQuartile: (values[4] + values[5]) / 2,
+        max: values[6]
+      };
+    }
+
+    function marginText(essPoints, oppPoints) {
+      const margin = essPoints - oppPoints;
+      if (margin > 0) return `Essendon +${margin}`;
+      if (margin < 0) return `Essendon ${margin}`;
+      return "Draw";
+    }
+
+    function splitScenarios(essResults, oppResults) {
+      let essWins = 0;
+      let oppWins = 0;
+      let draws = 0;
+      let weightedEssWins = 0;
+      let weightedOppWins = 0;
+      let weightedDraws = 0;
+
+      for (const essScenario of SCENARIOS) {
+        for (const oppScenario of SCENARIOS) {
+          const essPoints = essResults[essScenario.key].points;
+          const oppPoints = oppResults[oppScenario.key].points;
+          const combinedWeight = WEIGHTS[essScenario.key] * WEIGHTS[oppScenario.key];
+
+          if (essPoints > oppPoints) {
+            essWins += 1;
+            weightedEssWins += combinedWeight;
+          } else if (essPoints < oppPoints) {
+            oppWins += 1;
+            weightedOppWins += combinedWeight;
+          } else {
+            draws += 1;
+            weightedDraws += combinedWeight;
+          }
+        }
+      }
+
+      return {
+        essWins,
+        oppWins,
+        draws,
+        weightedEssWins,
+        weightedOppWins,
+        weightedDraws
+      };
+    }
+
+    function pct(value) {
+      return `${(value * 100).toFixed(1)}%`;
+    }
+
+    function pctCount(count) {
+      return `${((count / 49) * 100).toFixed(1)}%`;
+    }
+
+    function metric(label, value) {
+      return `<div class="metric"><div class="label">${label}</div><div class="value">${value}</div></div>`;
+    }
+
+    function renderTeamResult(name, result) {
+      return `<div class="team-result"><div class="team-name">${name}</div><div class="big-score">${formatScore(result)}</div><div>${result.points} points</div></div>`;
+    }
+
+    function rangeBar(range, proRataPoints, globalMin, globalMax) {
+      const spread = Math.max(globalMax - globalMin, 1);
+      const pctPos = value => ((value - globalMin) / spread) * 100;
+      const extremeLeft = pctPos(range.min);
+      const extremeWidth = pctPos(range.max) - extremeLeft;
+      const quartileLeft = pctPos(range.lowerQuartile);
+      const quartileWidth = pctPos(range.upperQuartile) - quartileLeft;
+      const proLeft = pctPos(proRataPoints);
+
+      return `
+        <div class="bar-wrap" aria-hidden="true">
+          <div class="bar-extreme" style="left:${extremeLeft}%; width:${extremeWidth}%;"></div>
+          <div class="bar-quartile" style="left:${quartileLeft}%; width:${quartileWidth}%;"></div>
+          <div class="bar-pro-rata" style="left:${proLeft}%;"></div>
+        </div>
+      `;
+    }
+
+    function renderRange(name, range, proRataPoints, globalMin, globalMax) {
+      return `
+        <div class="range-card">
+          <div class="range-title"><span>${name}</span><span>${Math.round(range.lowerQuartile)}-${Math.round(range.upperQuartile)} points (${range.min}-${range.max})</span></div>
+          <div>Median ${range.median}, pro-rata ${proRataPoints}</div>
+          ${rangeBar(range, proRataPoints, globalMin, globalMax)}
+        </div>
+      `;
+    }
+
+    function renderSplit(split) {
+      return `
+        <div class="split-box">
+          <h3>Unweighted scenario split</h3>
+          <div class="split-row win"><span>Essendon wins</span><strong>${split.essWins} / 49 (${pctCount(split.essWins)})</strong></div>
+          <div class="split-row loss"><span>Opponent wins</span><strong>${split.oppWins} / 49 (${pctCount(split.oppWins)})</strong></div>
+          <div class="split-row draw"><span>Draws</span><strong>${split.draws} / 49 (${pctCount(split.draws)})</strong></div>
+        </div>
+        <div class="split-box">
+          <h3>Weighted scenario model</h3>
+          <div class="split-row win"><span>Essendon wins</span><strong>${pct(split.weightedEssWins)}</strong></div>
+          <div class="split-row loss"><span>Opponent wins</span><strong>${pct(split.weightedOppWins)}</strong></div>
+          <div class="split-row draw"><span>Draws</span><strong>${pct(split.weightedDraws)}</strong></div>
+        </div>
+      `;
+    }
+
+    function renderScenarioTable(essResults, oppResults) {
+      const rows = SCENARIOS.map(s => {
+        const ess = essResults[s.key];
+        const opp = oppResults[s.key];
+        return `
+          <tr>
+            <td>${s.label}</td>
+            <td>${formatScore(ess)}</td>
+            <td>${formatScore(opp)}</td>
+            <td>${marginText(ess.points, opp.points)}</td>
+            <td>${(WEIGHTS[s.key] * 100).toFixed(0)}%</td>
+          </tr>
+        `;
+      }).join("");
+
+      return `
+        <table>
+          <thead>
+            <tr>
+              <th>Scenario</th>
+              <th>Essendon</th>
+              <th>Opponent</th>
+              <th>Like-for-like</th>
+              <th>Weight</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      `;
+    }
+
+
+    function getChanceStatus(split, essRange, oppRange) {
+      const essWeighted = split.weightedEssWins;
+      const lostCause = oppRange.lowerQuartile > essRange.upperQuartile;
+
+      if (lostCause) {
+        return {
+          key: "lost",
+          bodyClass: "lost-cause flashing",
+          message: `Quartile flag: opponent likely range starts above Essendon's likely range. Opponent ${Math.round(oppRange.lowerQuartile)}+ vs Essendon up to ${Math.round(essRange.upperQuartile)}.`
+        };
+      }
+
+      if (essWeighted >= 0.55) {
+        return {
+          key: "strong",
+          bodyClass: "chance-strong",
+          message: `Weighted model: Essendon are ahead in ${pct(essWeighted)} of the weighted scenario space.`
+        };
+      }
+
+      if (essWeighted >= 0.30) {
+        return {
+          key: "live",
+          bodyClass: "chance-live",
+          message: `Weighted model: Essendon remain live in ${pct(essWeighted)} of the weighted scenario space.`
+        };
+      }
+
+      if (essWeighted >= 0.12) {
+        return {
+          key: "danger",
+          bodyClass: "chance-danger",
+          message: `Weighted model: danger zone. Essendon win in ${pct(essWeighted)} of the weighted scenario space.`
+        };
+      }
+
+      return {
+        key: "grim",
+        bodyClass: "chance-grim",
+        message: `Weighted model: grim. Essendon win in only ${pct(essWeighted)} of the weighted scenario space.`
+      };
+    }
+
+    function applyChanceStatus(status) {
+      document.body.classList.remove("chance-strong", "chance-live", "chance-danger", "chance-grim", "lost-cause", "flashing");
+      status.bodyClass.split(" ").forEach(className => document.body.classList.add(className));
+
+      const banner = document.getElementById("statusBanner");
+      banner.className = `status-banner ${status.key}`;
+      banner.textContent = status.message;
+      banner.classList.remove("hidden");
+    }
+
+    function calculate() {
+      const errorBox = document.getElementById("errorBox");
+      const resultsBox = document.getElementById("results");
+      errorBox.classList.add("hidden");
+
+      const quarter = num("quarter");
+      const timePlayedQuarter = num("timePlayedQuarter");
+      const ess = {
+        goals: num("essGoals"),
+        behinds: num("essBehinds")
+      };
+      const opp = {
+        goals: num("oppGoals"),
+        behinds: num("oppBehinds")
+      };
+
+      const allNumbers = [quarter, timePlayedQuarter, ess.goals, ess.behinds, opp.goals, opp.behinds];
+      if (allNumbers.some(n => Number.isNaN(n))) {
+        document.body.classList.remove("chance-strong", "chance-live", "chance-danger", "chance-grim", "lost-cause", "flashing");
+        resultsBox.classList.add("hidden");
+        errorBox.textContent = "Please enter numbers in all fields.";
+        errorBox.classList.remove("hidden");
+        return;
+      }
+
+      const minutesPlayed = ((quarter - 1) * QUARTER_LENGTH) + timePlayedQuarter;
+      const minutesRemaining = GAME_LENGTH - minutesPlayed;
+
+      if (minutesPlayed === 0) {
+        document.body.classList.remove("chance-strong", "chance-live", "chance-danger", "chance-grim", "lost-cause", "flashing");
+        resultsBox.classList.add("hidden");
+        errorBox.textContent = "Not enough game time has elapsed to calculate projections.";
+        errorBox.classList.remove("hidden");
+        return;
+      }
+
+      ess.points = score(ess.goals, ess.behinds);
+      opp.points = score(opp.goals, opp.behinds);
+
+      const match = {
+        totalGoals: ess.goals + opp.goals,
+        totalBehinds: ess.behinds + opp.behinds
+      };
+
+      const essResults = calculateTeamScenarios(ess, match, minutesPlayed, minutesRemaining);
+      const oppResults = calculateTeamScenarios(opp, match, minutesPlayed, minutesRemaining);
+      const essRange = summariseRange(essResults);
+      const oppRange = summariseRange(oppResults);
+      const split = splitScenarios(essResults, oppResults);
+      const currentMargin = ess.points - opp.points;
+      const proMargin = essResults.proRata.points - oppResults.proRata.points;
+      const globalMin = Math.min(essRange.min, oppRange.min);
+      const globalMax = Math.max(essRange.max, oppRange.max);
+      const status = getChanceStatus(split, essRange, oppRange);
+      applyChanceStatus(status);
+
+      document.getElementById("currentState").innerHTML = [
+        metric("Essendon now", `${ess.goals}.${ess.behinds}.${ess.points}`),
+        metric("Opponent now", `${opp.goals}.${opp.behinds}.${opp.points}`),
+        metric("Time played", `${minutesPlayed.toFixed(1)} mins`),
+        metric("Time remaining", `${minutesRemaining.toFixed(1)} mins`),
+        metric("Current margin", marginText(ess.points, opp.points)),
+        metric("Pro-rata margin", proMargin > 0 ? `Essendon +${proMargin}` : proMargin < 0 ? `Essendon ${proMargin}` : "Draw"),
+        metric("Quarter length used", `${QUARTER_LENGTH} mins`),
+        metric("Game length used", `${GAME_LENGTH.toFixed(1)} mins`)
+      ].join("");
+
+      document.getElementById("proRataResult").innerHTML =
+        renderTeamResult("Essendon", essResults.proRata) +
+        renderTeamResult("Opponent", oppResults.proRata);
+
+      document.getElementById("rangeResults").innerHTML =
+        renderRange("Essendon", essRange, essResults.proRata.points, globalMin, globalMax) +
+        renderRange("Opponent", oppRange, oppResults.proRata.points, globalMin, globalMax);
+
+      document.getElementById("splitResults").innerHTML = renderSplit(split);
+      document.getElementById("scenarioTable").innerHTML = renderScenarioTable(essResults, oppResults);
+
+      resultsBox.classList.remove("hidden");
+    }
+
+    calculate();
+  </script>
+</body>
+</html>
