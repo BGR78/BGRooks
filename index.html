@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BenTools</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      min-height: 100vh;
+      background: #111827;
+      color: #f9fafb;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 800px;
+      padding: 32px 20px;
+    }
+
+    h1 {
+      margin-bottom: 8px;
+      font-size: 2.2rem;
+    }
+
+    .subtitle {
+      color: #d1d5db;
+      margin-bottom: 32px;
+    }
+
+    .app-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+    }
+
+    .app-card {
+      display: block;
+      padding: 20px;
+      border-radius: 16px;
+      background: #1f2937;
+      color: #f9fafb;
+      text-decoration: none;
+      border: 1px solid #374151;
+      transition: transform 0.15s ease, background 0.15s ease;
+    }
+
+    .app-card:hover {
+      transform: translateY(-2px);
+      background: #273449;
+    }
+
+    .app-card h2 {
+      margin: 0 0 8px 0;
+      font-size: 1.2rem;
+    }
+
+    .app-card p {
+      margin: 0;
+      color: #d1d5db;
+      line-height: 1.4;
+    }
+
+    .footer {
+      margin-top: 32px;
+      color: #9ca3af;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <h1>BenTools</h1>
+    <p class="subtitle">Small, useful, ridiculous personal web apps.</p>
+
+    <section class="app-grid">
+      <a class="app-card" href="footy-exit-calculator.html">
+        <h2>Footy Exit Calculator</h2>
+        <p>Work out whether Essendon are mathematically alive or whether it’s time to beat the car park traffic.</p>
+      </a>
+    </section>
+
+    <p class="footer">Version 0.1. First app: Footy Exit Calculator.</p>
+  </main>
+</body>
+</html>
