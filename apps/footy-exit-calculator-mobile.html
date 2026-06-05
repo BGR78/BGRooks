@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Footy Exit Calculator - Wheel</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: rgba(17, 24, 39, 0.94);
+      --card2: #1f2937;
+      --text: #f9fafb;
+      --muted: #cbd5e1;
+      --border: #374151;
+      --accent: #ef4444;
+      --accent2: #facc15;
+      --good: #14532d;
+      --danger: #78350f;
+      --grim: #7f1d1d;
+      --button: #334155;
+      --buttonActive: #475569;
+      --rowH: 44px;
+    }
+
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      transition: background 0.4s ease;
+    }
+
+    body.chance-strong { background: linear-gradient(160deg, #052e16, #0f172a); }
+    body.chance-live { background: linear-gradient(160deg, #12370f, #0f172a); }
+    body.chance-danger { background: linear-gradient(160deg, #78350f, #0f172a); }
+    body.chance-grim { background: linear-gradient(160deg, #7f1d1d, #0f172a); }
+    body.lost-cause { background: linear-gradient(160deg, #991b1b, #1f0303); }
+    body.flashing { animation: pulseLost 1.2s infinite alternate; }
+    @keyframes pulseLost {
+      from { background: #450a0a; }
+      to { background: #991b1b; }
+    }
+
+    .page {
+      width: 100%;
+      max-width: 720px;
+      margin: 0 auto;
+      padding: max(14px, env(safe-area-inset-top)) 12px max(18px, env(safe-area-inset-bottom));
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      margin: 4px 0 10px;
+    }
+
+    h1 { font-size: 1.25rem; margin: 0 0 4px; letter-spacing: -0.02em; }
+    h2 { font-size: 1rem; margin: 0 0 12px; }
+    .subtitle { margin: 0; color: var(--muted); font-size: 0.86rem; }
+    .version { font-size: 0.74rem; color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: 6px 8px; white-space: nowrap; }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 14px;
+      margin-bottom: 12px;
+      box-shadow: 0 10px 22px rgba(0,0,0,0.18);
+    }
+
+    .status-banner {
+      padding: 10px 12px;
+      border-radius: 14px;
+      margin-bottom: 12px;
+      font-weight: 800;
+      line-height: 1.35;
+      font-size: 0.92rem;
+      background: var(--card2);
+      border: 1px solid var(--border);
+    }
+    .status-banner.lost { background: #7f1d1d; border-color: #fecaca; }
+    .status-banner.grim { background: #7f1d1d; }
+    .status-banner.danger { background: #78350f; }
+    .status-banner.live { background: #1e3a11; }
+    .status-banner.strong { background: #14532d; }
+
+    .top-result { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .score-now {
+      background: var(--card2);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 12px;
+      text-align: center;
+    }
+    .score-now .label { color: var(--muted); font-size: 0.82rem; }
+    .score-now .value { font-size: 1.6rem; font-weight: 900; margin-top: 4px; font-variant-numeric: tabular-nums; }
+    .ess .value { color: #f87171; }
+    .opp .value { color: #93c5fd; }
+
+    .mini-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+    .mini { background: rgba(31, 41, 55, 0.82); border-radius: 13px; padding: 9px; }
+    .mini .label { color: var(--muted); font-size: 0.76rem; }
+    .mini .value { font-weight: 800; font-size: 0.96rem; margin-top: 2px; }
+
+    .wheel-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .wheel-group {
+      background: rgba(31, 41, 55, 0.78);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 10px;
+    }
+    .wheel-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .wheel-label span:first-child { color: var(--muted); font-size: 0.82rem; }
+    .wheel-current { font-size: 1.35rem; font-weight: 900; font-variant-numeric: tabular-nums; }
+    .wheel {
+      height: calc(var(--rowH) * 3);
+      overflow-y: auto;
+      border-radius: 14px;
+      background: #0b1220;
+      border: 1px solid #263244;
+      scroll-snap-type: y mandatory;
+      -webkit-overflow-scrolling: touch;
+      position: relative;
+      overscroll-behavior: contain;
+      scrollbar-width: none;
+    }
+    .wheel::-webkit-scrollbar { display: none; }
+    .wheel::before,
+    .wheel::after {
+      content: "";
+      position: sticky;
+      display: block;
+      height: var(--rowH);
+      pointer-events: none;
+      z-index: 2;
+    }
+    .wheel::before { top: 0; background: linear-gradient(#0b1220, rgba(11,18,32,0)); }
+    .wheel::after { bottom: 0; background: linear-gradient(rgba(11,18,32,0), #0b1220); }
+    .wheel-window {
+      position: absolute;
+      left: 8px;
+      right: 8px;
+      top: var(--rowH);
+      height: var(--rowH);
+      border-top: 1px solid rgba(250, 204, 21, 0.7);
+      border-bottom: 1px solid rgba(250, 204, 21, 0.7);
+      pointer-events: none;
+      z-index: 3;
+    }
+    .wheel-option {
+      height: var(--rowH);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      scroll-snap-align: center;
+      font-size: 1.22rem;
+      font-weight: 800;
+      color: #94a3b8;
+      font-variant-numeric: tabular-nums;
+    }
+    .wheel-option.selected { color: var(--text); font-size: 1.45rem; }
+
+    .team-title { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .team-title span { font-variant-numeric: tabular-nums; color: var(--accent2); }
+
+    .range-card { background: rgba(31,41,55,0.76); border-radius: 15px; padding: 12px; margin-bottom: 10px; }
+    .range-title { display: flex; justify-content: space-between; gap: 10px; font-weight: 800; font-variant-numeric: tabular-nums; }
+    .range-sub { color: var(--muted); font-size: 0.84rem; margin: 5px 0 10px; }
+    .bar-wrap { position: relative; height: 22px; background: #020617; border-radius: 999px; overflow: hidden; }
+    .bar-extreme, .bar-quartile { position: absolute; top: 6px; height: 10px; border-radius: 999px; }
+    .bar-extreme { background: #475569; }
+    .bar-quartile { background: var(--accent2); }
+    .bar-pro-rata { position: absolute; top: 2px; width: 4px; height: 18px; transform: translateX(-2px); border-radius: 999px; background: #f8fafc; }
+
+    .split-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .split-box { background: rgba(31,41,55,0.76); border-radius: 15px; padding: 12px; }
+    .split-box h3 { margin: 0 0 8px; font-size: 0.95rem; }
+    .split-row { display: flex; justify-content: space-between; gap: 8px; padding: 5px 0; border-top: 1px solid rgba(255,255,255,0.08); font-variant-numeric: tabular-nums; }
+    .split-row span { color: var(--muted); }
+
+    details { color: var(--muted); }
+    summary { cursor: pointer; font-weight: 800; color: var(--text); }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 0.82rem; }
+    th, td { padding: 8px 5px; border-bottom: 1px solid rgba(255,255,255,0.1); text-align: right; font-variant-numeric: tabular-nums; }
+    th:first-child, td:first-child { text-align: left; }
+
+    .utility { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    button {
+      border: 0;
+      border-radius: 14px;
+      min-height: 48px;
+      background: var(--button);
+      color: var(--text);
+      font-weight: 800;
+      font-size: 0.95rem;
+    }
+    button:active { transform: scale(0.98); background: var(--buttonActive); }
+
+    .hint { color: var(--muted); font-size: 0.82rem; margin-top: 8px; line-height: 1.35; }
+    @media (max-width: 370px) {
+      .wheel-row, .split-grid { grid-template-columns: 1fr; }
+      .mini-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <div>
+        <h1>Footy Exit Calculator</h1>
+        <p class="subtitle">Wheel picker version. Drag the numbers up or down.</p>
+      </div>
+      <div class="version">Wheel v1</div>
+    </header>
+
+    <section class="card" id="resultsTop">
+      <div id="statusBanner" class="status-banner"></div>
+      <div class="top-result">
+        <div class="score-now ess"><div class="label">Essendon</div><div class="value" id="essNow">0.0.0</div></div>
+        <div class="score-now opp"><div class="label">Opponent</div><div class="value" id="oppNow">0.0.0</div></div>
+      </div>
+      <div class="mini-grid" id="currentState"></div>
+    </section>
+
+    <section class="card">
+      <h2>Match position</h2>
+      <div class="wheel-row">
+        <div class="wheel-group" data-wheel-wrap="quarter"></div>
+        <div class="wheel-group" data-wheel-wrap="timePlayedQuarter"></div>
+      </div>
+      <p class="hint">Time is minutes already played in the quarter. Half-minutes are supported.</p>
+    </section>
+
+    <section class="card">
+      <h2 class="team-title">Essendon <span id="essSummary">0.0.0</span></h2>
+      <div class="wheel-row">
+        <div class="wheel-group" data-wheel-wrap="essGoals"></div>
+        <div class="wheel-group" data-wheel-wrap="essBehinds"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2 class="team-title">Opponent <span id="oppSummary">0.0.0</span></h2>
+      <div class="wheel-row">
+        <div class="wheel-group" data-wheel-wrap="oppGoals"></div>
+        <div class="wheel-group" data-wheel-wrap="oppBehinds"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Pro-rata result</h2>
+      <div class="top-result">
+        <div class="score-now ess"><div class="label">Essendon</div><div class="value" id="essPro">0.0.0</div></div>
+        <div class="score-now opp"><div class="label">Opponent</div><div class="value" id="oppPro">0.0.0</div></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Ranges</h2>
+      <div id="rangeResults"></div>
+    </section>
+
+    <section class="card">
+      <h2>Scenario split</h2>
+      <div class="split-grid" id="splitResults"></div>
+    </section>
+
+    <section class="card">
+      <details>
+        <summary>Scenario table</summary>
+        <div id="scenarioTable"></div>
+      </details>
+    </section>
+
+    <section class="card utility">
+      <button type="button" id="resetBtn">Reset sample</button>
+      <button type="button" id="zeroBtn">Zero scores</button>
+    </section>
+  </div>
+
+  <script>
+    const QUARTER_LENGTH = 32.175;
+    const GAME_LENGTH = QUARTER_LENGTH * 4;
+    const WEIGHTS = { lowC: 0.05, lowB: 0.12, lowA: 0.12, proRata: 0.43, highA: 0.11, highB: 0.12, highC: 0.05 };
+    const SCENARIOS = [
+      { key: "lowC", label: "Low C", type: "low" },
+      { key: "lowB", label: "Low B", type: "low" },
+      { key: "lowA", label: "Low A", type: "low" },
+      { key: "proRata", label: "Pro-rata", type: "pro" },
+      { key: "highA", label: "High A", type: "high" },
+      { key: "highB", label: "High B", type: "high" },
+      { key: "highC", label: "High C", type: "high" }
+    ];
+
+    const state = {
+      quarter: 3,
+      timePlayedQuarter: 12.5,
+      essGoals: 6,
+      essBehinds: 7,
+      oppGoals: 10,
+      oppBehinds: 8
+    };
+
+    const wheelConfigs = {
+      quarter: { label: "Quarter", min: 1, max: 4, step: 1, format: v => `Q${v}` },
+      timePlayedQuarter: { label: "Minutes", min: 0, max: 35, step: 0.5, format: v => Number(v).toFixed(1) },
+      essGoals: { label: "Goals", min: 0, max: 35, step: 1, format: v => String(v) },
+      essBehinds: { label: "Behinds", min: 0, max: 35, step: 1, format: v => String(v) },
+      oppGoals: { label: "Goals", min: 0, max: 35, step: 1, format: v => String(v) },
+      oppBehinds: { label: "Behinds", min: 0, max: 35, step: 1, format: v => String(v) }
+    };
+
+    const wheelState = {};
+
+    function clamp(value, min) { return Math.max(min, value); }
+    function score(goals, behinds) { return goals * 6 + behinds; }
+    function formatScore(result) { return `${result.goals}.${result.behinds}.${result.points}`; }
+    function roundByType(value, type) { if (type === "low") return Math.floor(value); if (type === "high") return Math.ceil(value); return Math.round(value); }
+    function makeResult(goals, behinds, type) {
+      const roundedGoals = roundByType(goals, type);
+      const roundedBehinds = roundByType(behinds, type);
+      return { goals: roundedGoals, behinds: roundedBehinds, points: score(roundedGoals, roundedBehinds) };
+    }
+    function calculateTeamScenarios(team, match, minutesPlayed, minutesRemaining) {
+      const teamGoalRate = team.goals / minutesPlayed;
+      const teamBehindRate = team.behinds / minutesPlayed;
+      const totalGoalRate = match.totalGoals / minutesPlayed;
+      const totalBehindRate = match.totalBehinds / minutesPlayed;
+      const teamRemainingGoals = teamGoalRate * minutesRemaining;
+      const teamRemainingBehinds = teamBehindRate * minutesRemaining;
+      const totalRemainingGoals = totalGoalRate * minutesRemaining;
+      const totalRemainingBehinds = totalBehindRate * minutesRemaining;
+      return {
+        lowC: makeResult(team.goals, team.behinds + totalRemainingBehinds, "low"),
+        lowB: makeResult(team.goals, team.behinds + teamRemainingGoals + teamRemainingBehinds, "low"),
+        lowA: makeResult(team.goals + teamRemainingGoals / 2, team.behinds + teamRemainingBehinds / 2, "low"),
+        proRata: makeResult(team.goals + teamRemainingGoals, team.behinds + teamRemainingBehinds, "pro"),
+        highA: makeResult(team.goals + teamRemainingGoals * 2, team.behinds + teamRemainingBehinds * 2, "high"),
+        highB: makeResult(team.goals + teamRemainingGoals + teamRemainingBehinds, team.behinds, "high"),
+        highC: makeResult(team.goals + totalRemainingGoals, team.behinds, "high")
+      };
+    }
+    function sortedPoints(results) { return SCENARIOS.map(s => results[s.key].points).sort((a, b) => a - b); }
+    function summariseRange(results) {
+      const values = sortedPoints(results);
+      return { min: values[0], lowerQuartile: (values[1] + values[2]) / 2, median: values[3], upperQuartile: (values[4] + values[5]) / 2, max: values[6] };
+    }
+    function marginText(essPoints, oppPoints) { const m = essPoints - oppPoints; if (m > 0) return `Essendon +${m}`; if (m < 0) return `Essendon ${m}`; return "Draw"; }
+    function splitScenarios(essResults, oppResults) {
+      let essWins = 0, oppWins = 0, draws = 0, weightedEssWins = 0, weightedOppWins = 0, weightedDraws = 0;
+      for (const essScenario of SCENARIOS) {
+        for (const oppScenario of SCENARIOS) {
+          const essPoints = essResults[essScenario.key].points;
+          const oppPoints = oppResults[oppScenario.key].points;
+          const combinedWeight = WEIGHTS[essScenario.key] * WEIGHTS[oppScenario.key];
+          if (essPoints > oppPoints) { essWins++; weightedEssWins += combinedWeight; }
+          else if (essPoints < oppPoints) { oppWins++; weightedOppWins += combinedWeight; }
+          else { draws++; weightedDraws += combinedWeight; }
+        }
+      }
+      return { essWins, oppWins, draws, weightedEssWins, weightedOppWins, weightedDraws };
+    }
+    function pct(value) { return `${(value * 100).toFixed(1)}%`; }
+    function pctCount(count) { return `${((count / 49) * 100).toFixed(1)}%`; }
+    function mini(label, value) { return `<div class="mini"><div class="label">${label}</div><div class="value">${value}</div></div>`; }
+    function rangeBar(range, proRataPoints, globalMin, globalMax) {
+      const spread = Math.max(globalMax - globalMin, 1);
+      const pctPos = value => ((value - globalMin) / spread) * 100;
+      return `<div class="bar-wrap" aria-hidden="true"><div class="bar-extreme" style="left:${pctPos(range.min)}%; width:${pctPos(range.max) - pctPos(range.min)}%;"></div><div class="bar-quartile" style="left:${pctPos(range.lowerQuartile)}%; width:${pctPos(range.upperQuartile) - pctPos(range.lowerQuartile)}%;"></div><div class="bar-pro-rata" style="left:${pctPos(proRataPoints)}%;"></div></div>`;
+    }
+    function renderRange(name, range, proRataPoints, globalMin, globalMax) {
+      return `<div class="range-card"><div class="range-title"><span>${name}</span><span>${Math.round(range.lowerQuartile)}-${Math.round(range.upperQuartile)} pts</span></div><div class="range-sub">Extremes ${range.min}-${range.max}. Median ${range.median}, pro-rata ${proRataPoints}.</div>${rangeBar(range, proRataPoints, globalMin, globalMax)}</div>`;
+    }
+    function renderSplit(split) {
+      return `<div class="split-box"><h3>Unweighted</h3><div class="split-row win"><span>Ess</span><strong>${split.essWins}/49 (${pctCount(split.essWins)})</strong></div><div class="split-row loss"><span>Opp</span><strong>${split.oppWins}/49 (${pctCount(split.oppWins)})</strong></div><div class="split-row draw"><span>Draw</span><strong>${split.draws}/49 (${pctCount(split.draws)})</strong></div></div><div class="split-box"><h3>Weighted</h3><div class="split-row win"><span>Ess</span><strong>${pct(split.weightedEssWins)}</strong></div><div class="split-row loss"><span>Opp</span><strong>${pct(split.weightedOppWins)}</strong></div><div class="split-row draw"><span>Draw</span><strong>${pct(split.weightedDraws)}</strong></div></div>`;
+    }
+    function renderScenarioTable(essResults, oppResults) {
+      const rows = SCENARIOS.map(s => { const ess = essResults[s.key]; const opp = oppResults[s.key]; return `<tr><td>${s.label}</td><td>${formatScore(ess)}</td><td>${formatScore(opp)}</td><td>${marginText(ess.points, opp.points)}</td><td>${(WEIGHTS[s.key] * 100).toFixed(0)}%</td></tr>`; }).join("");
+      return `<table><thead><tr><th>Scenario</th><th>Ess</th><th>Opp</th><th>Margin</th><th>Wgt</th></tr></thead><tbody>${rows}</tbody></table>`;
+    }
+    function getChanceStatus(split, essRange, oppRange) {
+      const essWeighted = split.weightedEssWins;
+      const lostCause = oppRange.lowerQuartile > essRange.upperQuartile;
+      if (lostCause) return { key: "lost", bodyClass: "lost-cause flashing", message: `Quartile flag: opponent likely range starts above Essendon's likely range. Opponent ${Math.round(oppRange.lowerQuartile)}+ vs Essendon up to ${Math.round(essRange.upperQuartile)}.` };
+      if (essWeighted >= 0.55) return { key: "strong", bodyClass: "chance-strong", message: `Weighted model: Essendon ahead in ${pct(essWeighted)} of weighted scenario space.` };
+      if (essWeighted >= 0.30) return { key: "live", bodyClass: "chance-live", message: `Weighted model: Essendon live in ${pct(essWeighted)} of weighted scenario space.` };
+      if (essWeighted >= 0.12) return { key: "danger", bodyClass: "chance-danger", message: `Weighted model: danger zone. Essendon win in ${pct(essWeighted)}.` };
+      return { key: "grim", bodyClass: "chance-grim", message: `Weighted model: grim. Essendon win in only ${pct(essWeighted)}.` };
+    }
+    function applyChanceStatus(status) {
+      document.body.classList.remove("chance-strong", "chance-live", "chance-danger", "chance-grim", "lost-cause", "flashing");
+      status.bodyClass.split(" ").forEach(c => document.body.classList.add(c));
+      const banner = document.getElementById("statusBanner");
+      banner.className = `status-banner ${status.key}`;
+      banner.textContent = status.message;
+    }
+
+    function buildWheel(key) {
+      const cfg = wheelConfigs[key];
+      const wrap = document.querySelector(`[data-wheel-wrap="${key}"]`);
+      const values = [];
+      for (let v = cfg.min; v <= cfg.max + 0.0001; v += cfg.step) values.push(Math.round(v * 10) / 10);
+      const items = values.map(v => `<div class="wheel-option" data-value="${v}">${cfg.format(v)}</div>`).join("");
+      wrap.innerHTML = `<div class="wheel-label"><span>${cfg.label}</span><strong class="wheel-current" id="${key}Current">${cfg.format(state[key])}</strong></div><div class="wheel" id="${key}Wheel"><div class="wheel-window"></div>${items}</div>`;
+      const wheel = document.getElementById(`${key}Wheel`);
+      wheelState[key] = { wheel, values, cfg, scrollingProgrammatically: false };
+      wheel.addEventListener("scroll", () => handleWheelScroll(key), { passive: true });
+    }
+
+    function optionHeight() {
+      return parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--rowH")) || 44;
+    }
+
+    function scrollWheelToValue(key, smooth = false) {
+      const data = wheelState[key];
+      if (!data) return;
+      const index = data.values.findIndex(v => Math.abs(v - state[key]) < 0.001);
+      if (index < 0) return;
+      data.scrollingProgrammatically = true;
+      data.wheel.scrollTo({ top: index * optionHeight(), behavior: smooth ? "smooth" : "auto" });
+      setTimeout(() => { data.scrollingProgrammatically = false; updateWheelSelection(key); }, smooth ? 260 : 40);
+    }
+
+    function updateWheelSelection(key) {
+      const data = wheelState[key];
+      if (!data) return;
+      const cfg = data.cfg;
+      document.getElementById(`${key}Current`).textContent = cfg.format(state[key]);
+      data.wheel.querySelectorAll(".wheel-option").forEach(el => {
+        el.classList.toggle("selected", Math.abs(Number(el.dataset.value) - state[key]) < 0.001);
+      });
+    }
+
+    const wheelTimers = {};
+    function handleWheelScroll(key) {
+      const data = wheelState[key];
+      if (!data || data.scrollingProgrammatically) return;
+      clearTimeout(wheelTimers[key]);
+      wheelTimers[key] = setTimeout(() => {
+        const idx = Math.round(data.wheel.scrollTop / optionHeight());
+        const value = data.values[Math.max(0, Math.min(data.values.length - 1, idx))];
+        if (value !== undefined && Math.abs(state[key] - value) > 0.001) {
+          state[key] = value;
+          updateWheelSelection(key);
+          calculate();
+        }
+      }, 70);
+    }
+
+    function updateControls() {
+      Object.keys(wheelConfigs).forEach(key => updateWheelSelection(key));
+    }
+
+    function calculate() {
+      updateControls();
+      const minutesPlayed = ((state.quarter - 1) * QUARTER_LENGTH) + state.timePlayedQuarter;
+      const minutesRemaining = GAME_LENGTH - minutesPlayed;
+      const ess = { goals: state.essGoals, behinds: state.essBehinds };
+      const opp = { goals: state.oppGoals, behinds: state.oppBehinds };
+      ess.points = score(ess.goals, ess.behinds);
+      opp.points = score(opp.goals, opp.behinds);
+      document.getElementById("essNow").textContent = `${ess.goals}.${ess.behinds}.${ess.points}`;
+      document.getElementById("oppNow").textContent = `${opp.goals}.${opp.behinds}.${opp.points}`;
+      document.getElementById("essSummary").textContent = `${ess.goals}.${ess.behinds}.${ess.points}`;
+      document.getElementById("oppSummary").textContent = `${opp.goals}.${opp.behinds}.${opp.points}`;
+
+      const safeMinutesPlayed = minutesPlayed === 0 ? 0.001 : minutesPlayed;
+      const match = { totalGoals: ess.goals + opp.goals, totalBehinds: ess.behinds + opp.behinds };
+      const essResults = calculateTeamScenarios(ess, match, safeMinutesPlayed, minutesRemaining);
+      const oppResults = calculateTeamScenarios(opp, match, safeMinutesPlayed, minutesRemaining);
+      const essRange = summariseRange(essResults);
+      const oppRange = summariseRange(oppResults);
+      const split = splitScenarios(essResults, oppResults);
+      const globalMin = Math.min(essRange.min, oppRange.min);
+      const globalMax = Math.max(essRange.max, oppRange.max);
+      applyChanceStatus(getChanceStatus(split, essRange, oppRange));
+
+      document.getElementById("currentState").innerHTML = [
+        mini("Time played", `${minutesPlayed.toFixed(1)} mins`),
+        mini("Time remaining", `${minutesRemaining.toFixed(1)} mins`),
+        mini("Current margin", marginText(ess.points, opp.points)),
+        mini("Pro-rata margin", marginText(essResults.proRata.points, oppResults.proRata.points))
+      ].join("");
+      document.getElementById("essPro").textContent = formatScore(essResults.proRata);
+      document.getElementById("oppPro").textContent = formatScore(oppResults.proRata);
+      document.getElementById("rangeResults").innerHTML = renderRange("Essendon", essRange, essResults.proRata.points, globalMin, globalMax) + renderRange("Opponent", oppRange, oppResults.proRata.points, globalMin, globalMax);
+      document.getElementById("splitResults").innerHTML = renderSplit(split);
+      document.getElementById("scenarioTable").innerHTML = renderScenarioTable(essResults, oppResults);
+    }
+
+    document.getElementById("resetBtn").addEventListener("click", () => {
+      Object.assign(state, { quarter: 3, timePlayedQuarter: 12.5, essGoals: 6, essBehinds: 7, oppGoals: 10, oppBehinds: 8 });
+      Object.keys(wheelConfigs).forEach(key => scrollWheelToValue(key));
+      calculate();
+    });
+    document.getElementById("zeroBtn").addEventListener("click", () => {
+      Object.assign(state, { essGoals: 0, essBehinds: 0, oppGoals: 0, oppBehinds: 0 });
+      ["essGoals", "essBehinds", "oppGoals", "oppBehinds"].forEach(key => scrollWheelToValue(key));
+      calculate();
+    });
+
+    Object.keys(wheelConfigs).forEach(buildWheel);
+    window.addEventListener("load", () => {
+      Object.keys(wheelConfigs).forEach(key => scrollWheelToValue(key));
+      calculate();
+    });
+  </script>
+</body>
+</html>
