@@ -411,7 +411,7 @@
       <div class="logo" aria-hidden="true"></div>
       <div>
         <h1>Dex Mapper</h1>
-        <p class="subtitle">Personal timing mapper for prescribed 5 mg dex tablets. It models timing, not medical decisions.</p>
+        <p class="subtitle">Personal timing mapper for prescribed 5 mg dex tablets. It models estimated functional effect, not medical decisions.</p>
       </div>
     </header>
 
@@ -531,14 +531,14 @@
           <div class="legend">
             <span><i class="swatch dashed"></i> Already taken only</span>
             <span><i class="swatch"></i> Already taken plus proposed</span>
-            <span><i class="swatch band"></i> Low to high estimate</span>
+            <span><i class="swatch band"></i> Low to high functional estimate</span>
             <span><i class="swatch focus"></i> Focus</span>
             <span><i class="swatch low"></i> Low-stimulation</span>
           </div>
           <canvas id="chart" aria-label="Dex impact graph" role="img"></canvas>
         </div>
 
-        <p class="footer-note">Model assumptions are hard-coded in this file: one 5 mg tablet peaks at 1.0, median peak at 2 hours, median half-life 10.25 hours, low estimate 1.5 hour peak and 7 hour half-life, high estimate 3 hour peak and 16 hour half-life. This is a personal maths model only.</p>
+        <p class="footer-note">Model assumptions are hard-coded in this file: one 5 mg tablet peaks at 1.0. The graph shows estimated functional effect, not plasma concentration. Low / median / high estimates use peak times of 1.5 / 2 / 3 hours and functional fade half-lives of 1.75 / 2.5 / 4 hours. Published plasma half-life is longer, but that is not the same as useful felt effect. This is a personal maths model only.</p>
       </section>
     </main>
   </div>
@@ -561,9 +561,11 @@
     const MAX_EXTRA_GRAPH_HOURS = 8;
 
     const MODELS = {
-      low: { peakHours: 1.5, halfLifeHours: 7 },
-      median: { peakHours: 2, halfLifeHours: 10.25 },
-      high: { peakHours: 3, halfLifeHours: 16 }
+      // These are functional-effect fade assumptions, not plasma half-life values.
+      // Published plasma half-life is much longer, but immediate-release useful effect is usually shorter.
+      low: { peakHours: 1.5, effectHalfLifeHours: 1.75 },
+      median: { peakHours: 2, effectHalfLifeHours: 2.5 },
+      high: { peakHours: 3, effectHalfLifeHours: 4 }
     };
 
     const el = (id) => document.getElementById(id);
@@ -617,7 +619,7 @@
         return smoothstep(deltaMinutes / peakMinutes);
       }
       const decayMinutes = deltaMinutes - peakMinutes;
-      return Math.pow(0.5, decayMinutes / (model.halfLifeHours * 60));
+      return Math.pow(0.5, decayMinutes / (model.effectHalfLifeHours * 60));
     }
 
     function totalImpactAt(doseMinutes, t, model) {
