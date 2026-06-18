@@ -189,7 +189,23 @@ button:hover,
   background: var(--navy-soft);
   color: white;
 }
+.primary-button { background: var(--gold); color: var(--navy); box-shadow: 0 10px 24px rgba(247, 201, 72, 0.28); }
+.primary-button:hover { background: #ffd95f; }
 .danger-button { background: var(--danger-soft); color: var(--danger); }
+.entry-status {
+  margin: -4px 0 14px;
+  padding: 10px 12px;
+  border: 1px solid rgba(15, 122, 79, 0.22);
+  border-radius: 14px;
+  background: var(--green-soft);
+  color: var(--green);
+  font-weight: 800;
+}
+.entry-status--warning {
+  border-color: rgba(180, 35, 24, 0.24);
+  background: var(--danger-soft);
+  color: var(--danger);
+}
 .entry-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));

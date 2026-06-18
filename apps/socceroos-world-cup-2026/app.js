@@ -113,10 +113,12 @@
 
   let state = loadState();
   let entryFilter = 'australia';
+  let hasUnsavedInput = false;
 
   document.addEventListener('DOMContentLoaded', () => {
     bindControls();
     render();
+    updateEntryStatus('Ready. Enter both scores for a match, then save/update.');
   });
 
   function gm(id, date, group, home, away) {
@@ -128,20 +130,36 @@
   }
 
   function bindControls() {
-    document.getElementById('showAustraliaOnly').addEventListener('click', () => { entryFilter = 'australia'; render(); });
-    document.getElementById('showAllGroupMatches').addEventListener('click', () => { entryFilter = 'all'; render(); });
+    document.getElementById('saveUpdateButton').addEventListener('click', () => saveVisibleScoreInputs({ renderAfter: true, source: 'button' }));
+    window.addEventListener('beforeunload', () => {
+      if (hasUnsavedInput) saveVisibleScoreInputs({ renderAfter: false, silent: true, source: 'beforeunload' });
+    });
+    document.getElementById('showAustraliaOnly').addEventListener('click', () => {
+      if (hasUnsavedInput) saveVisibleScoreInputs({ renderAfter: false, silent: true, source: 'filter' });
+      entryFilter = 'australia';
+      render();
+    });
+    document.getElementById('showAllGroupMatches').addEventListener('click', () => {
+      if (hasUnsavedInput) saveVisibleScoreInputs({ renderAfter: false, silent: true, source: 'filter' });
+      entryFilter = 'all';
+      render();
+    });
     document.getElementById('resetStarter').addEventListener('click', () => {
       if (confirm('Reset to the starter results snapshot? This will replace your current saved scores.')) {
         state = { starterVersion: STARTER_VERSION, results: cloneResults(STARTER_RESULTS), updatedAt: new Date().toISOString() };
+        hasUnsavedInput = false;
         saveState();
         render();
+        updateEntryStatus('Starter results restored and forecast updated.');
       }
     });
     document.getElementById('clearButton').addEventListener('click', () => {
       if (confirm('Clear every saved score on this device?')) {
         state = { starterVersion: STARTER_VERSION, results: {}, updatedAt: new Date().toISOString() };
+        hasUnsavedInput = false;
         saveState();
         render();
+        updateEntryStatus('All saved scores cleared and forecast updated.');
       }
     });
     document.getElementById('exportButton').addEventListener('click', exportScores);
@@ -489,8 +507,8 @@
       `;
     }).join('');
     grid.querySelectorAll('.score-input').forEach(input => {
-      input.addEventListener('change', handleScoreInput);
-      input.addEventListener('input', handleScoreInput);
+      input.addEventListener('input', markInputDirty);
+      input.addEventListener('change', () => saveVisibleScoreInputs({ renderAfter: false, source: 'auto' }));
     });
   }
 
@@ -503,24 +521,69 @@
     `;
   }
 
-  function handleScoreInput(event) {
-    const input = event.target;
-    const card = input.closest('[data-match-id]');
-    if (!card) return;
-    const matchId = card.dataset.matchId;
-    const homeInput = card.querySelector('[data-side="home"]');
-    const awayInput = card.querySelector('[data-side="away"]');
-    const home = homeInput.value === '' ? null : Number(homeInput.value);
-    const away = awayInput.value === '' ? null : Number(awayInput.value);
-    if (home === null && away === null) {
-      delete state.results[matchId];
-    } else if (Number.isInteger(home) && Number.isInteger(away) && home >= 0 && away >= 0) {
-      state.results[matchId] = [home, away];
-    } else {
-      return;
+  function markInputDirty() {
+    hasUnsavedInput = true;
+    updateEntryStatus('Unsaved score change. Press “Save scores & update forecast” when finished.');
+  }
+
+  function saveVisibleScoreInputs(options = {}) {
+    const { renderAfter = false, silent = false, source = 'manual' } = options;
+    const cards = Array.from(document.querySelectorAll('#scoreEntryGrid [data-match-id]'));
+    const nextResults = { ...state.results };
+    const invalid = [];
+    const partial = [];
+    let savedPairs = 0;
+    let clearedPairs = 0;
+
+    cards.forEach(card => {
+      const matchId = card.dataset.matchId;
+      const homeInput = card.querySelector('[data-side="home"]');
+      const awayInput = card.querySelector('[data-side="away"]');
+      if (!homeInput || !awayInput) return;
+      const homeRaw = homeInput.value.trim();
+      const awayRaw = awayInput.value.trim();
+      const match = MATCH_LOOKUP[matchId];
+      const label = match ? `${TEAMS[match.home]?.name || match.home || 'TBD'} v ${TEAMS[match.away]?.name || match.away || 'TBD'}` : matchId;
+
+      if (homeRaw === '' && awayRaw === '') {
+        if (nextResults[matchId]) clearedPairs += 1;
+        delete nextResults[matchId];
+        return;
+      }
+      if (homeRaw === '' || awayRaw === '') {
+        partial.push(label);
+        return;
+      }
+
+      const home = Number(homeRaw);
+      const away = Number(awayRaw);
+      if (!Number.isInteger(home) || !Number.isInteger(away) || home < 0 || away < 0) {
+        invalid.push(label);
+        return;
+      }
+      nextResults[matchId] = [home, away];
+      savedPairs += 1;
+    });
+
+    if (invalid.length) {
+      if (!silent) updateEntryStatus(`Could not save: ${invalid[0]} has an invalid score. Use whole numbers only.`, true);
+      return false;
     }
+
+    state.results = normaliseResults(nextResults);
+    hasUnsavedInput = false;
     saveState();
-    render();
+
+    if (renderAfter) {
+      render();
+      updateEntryStatus(`Saved ${Object.keys(state.results).length} completed result${Object.keys(state.results).length === 1 ? '' : 's'} and updated the forecast.`);
+    } else if (!silent && source !== 'auto') {
+      updateEntryStatus(`Saved ${Object.keys(state.results).length} completed result${Object.keys(state.results).length === 1 ? '' : 's'} on this device.`);
+    } else if (!silent && partial.length) {
+      updateEntryStatus(`Partly entered score not saved yet: ${partial[0]}. Enter both scores, then save/update.`, true);
+    }
+
+    return true;
   }
 
   function renderAustraliaPath(model) {
@@ -742,6 +805,13 @@
     return `${number}${suffix}`;
   }
 
+  function updateEntryStatus(message, isWarning = false) {
+    const status = document.getElementById('entryStatus');
+    if (!status) return;
+    status.textContent = message;
+    status.classList.toggle('entry-status--warning', Boolean(isWarning));
+  }
+
   function updateSaveStatus() {
     const status = document.getElementById('saveStatus');
     if (!status) return;
@@ -782,8 +852,10 @@
         const parsed = JSON.parse(String(reader.result));
         const imported = normaliseResults(parsed.results || parsed);
         state = { starterVersion: STARTER_VERSION, results: imported, updatedAt: new Date().toISOString() };
+        hasUnsavedInput = false;
         saveState();
         render();
+        updateEntryStatus('Imported scores saved and forecast updated.');
       } catch (error) {
         alert('Could not import that scores file. It does not look like valid JSON from this app.');
       } finally {

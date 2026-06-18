@@ -6,7 +6,7 @@ A standalone browser app that forecasts the Socceroos' World Cup 2026 path using
 
 ## Version
 
-Manual-first V2.
+Manual-first V3.
 
 This version deliberately removes the live API dependency. The previous live-data version could hang if an external source stalled or changed. This version has the World Cup schedule baked into the app and saves scores locally in the browser.
 
@@ -32,7 +32,7 @@ Then link to:
 ## How it works
 
 - Enter final scores as matches finish.
-- Scores are saved using `localStorage` in the current browser on the current device.
+- Scores are saved using `localStorage` in the current browser on the current device. V3 adds an explicit **Save scores & update forecast** button so it is clear when the forecast has recalculated.
 - The app recalculates group tables, best third-placed teams, the Socceroos path and knockout forecasts instantly.
 - No accounts, logins, backend, live fetches or paid services are required.
 
@@ -46,7 +46,7 @@ The app includes export/import buttons as a safety valve, but you can ignore the
 
 The app starts with a 2026-06-18 AEST snapshot of completed group results through Ghana 1-0 Panama. Uzbekistan v Colombia was live in the source snapshot and is left blank for manual entry.
 
-Use **Reset starter results** to go back to that snapshot, or **Clear all saved scores** to start blank.
+Use **Save scores & update forecast** after entering results. Use **Reset starter results** to go back to that snapshot, or **Clear all saved scores** to start blank.
 
 ## Forecast model
 
