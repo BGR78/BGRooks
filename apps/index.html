@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Socceroos World Cup 2026 Forecaster | Ben's Shed</title>
+  <meta name="description" content="A Ben's Shed Socceroos-first FIFA World Cup 2026 path forecaster using tournament results only.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="hero">
+    <div class="hero__inner">
+      <div>
+        <p class="eyebrow">Ben's Shed · bOS</p>
+        <h1>Socceroos World Cup 2026 Forecaster</h1>
+        <p class="tagline">A tournament-form forecast of what the World Cup currently means for Australia.</p>
+      </div>
+      <div class="hero__status" id="loadStatus">
+        <span class="pulse"></span>
+        Loading live World Cup data…
+      </div>
+    </div>
+  </header>
+
+  <main class="app-shell">
+    <section id="errorPanel" class="error-panel hidden" aria-live="polite"></section>
+
+    <section class="dashboard-grid" aria-label="Socceroos summary">
+      <article class="card card--feature" id="australiaCard"></article>
+      <article class="card" id="nextMatchCard"></article>
+      <article class="card" id="tournamentCard"></article>
+    </section>
+
+    <section class="section-block" id="pathSection">
+      <div class="section-title">
+        <div>
+          <p class="eyebrow">Primary output</p>
+          <h2>Socceroos path</h2>
+        </div>
+      </div>
+      <div class="path-list" id="australiaPath"></div>
+    </section>
+
+    <section class="section-block" id="scenarioSection">
+      <div class="section-title">
+        <div>
+          <p class="eyebrow">What if?</p>
+          <h2>Next Australia match scenarios</h2>
+        </div>
+      </div>
+      <div class="scenario-grid" id="scenarioGrid"></div>
+    </section>
+
+    <section class="section-block">
+      <div class="section-title">
+        <div>
+          <p class="eyebrow">Tables</p>
+          <h2>Projected groups and best thirds</h2>
+        </div>
+      </div>
+      <div class="tabs" role="tablist" aria-label="Tables">
+        <button class="tab-button active" data-tab="groups" type="button">Groups</button>
+        <button class="tab-button" data-tab="thirds" type="button">Best thirds</button>
+      </div>
+      <div id="groupsTab" class="tab-panel"></div>
+      <div id="thirdsTab" class="tab-panel hidden"></div>
+    </section>
+
+    <section class="section-block">
+      <div class="section-title">
+        <div>
+          <p class="eyebrow">Knockout simulation</p>
+          <h2>Forecast bracket</h2>
+        </div>
+      </div>
+      <div class="bracket-list" id="bracketList"></div>
+    </section>
+
+    <section class="section-block">
+      <div class="section-title section-title--with-button">
+        <div>
+          <p class="eyebrow">Background data</p>
+          <h2>All matches</h2>
+        </div>
+        <button type="button" id="refreshButton" class="secondary-button">Refresh live data</button>
+      </div>
+      <div class="table-wrap">
+        <table class="matches-table">
+          <thead>
+            <tr>
+              <th>Match</th>
+              <th>When</th>
+              <th>Stage</th>
+              <th>Teams</th>
+              <th>Result / forecast</th>
+              <th>Model range</th>
+            </tr>
+          </thead>
+          <tbody id="matchesBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section-block note-block">
+      <h2>Model notes</h2>
+      <p>Forecasts use only FIFA World Cup 2026 matches already completed at load time. They do not use betting odds, squad strength, Elo, historical results or FIFA rankings to predict match scores.</p>
+      <p>FIFA rankings may be used only if needed to resolve official tournament ranking rules, not as a team-strength input. Match forecast draws in knockout games are split using the unrounded model result.</p>
+      <p id="dataSourceNote"></p>
+    </section>
+  </main>
+
+  <template id="miniTableTemplate">
+    <table class="mini-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Team</th>
+          <th>Pts</th>
+          <th>GD</th>
+          <th>GF</th>
+          <th>GA</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>
