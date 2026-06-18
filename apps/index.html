@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Deck Crawl</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="app-shell">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Ben’s Shed presents</p>
+        <h1>Deck Crawl</h1>
+        <p class="subtitle">A tiny card duel against the deck. Play, hold, burn and recycle your way through as many enemies as you can.</p>
+      </div>
+      <button id="newGameTop" class="button secondary">New game</button>
+    </header>
+
+    <section class="score-strip" aria-label="Game progress">
+      <div class="score-card">
+        <span class="label">Enemy</span>
+        <strong id="wave">1</strong>
+      </div>
+      <div class="score-card">
+        <span class="label">Defeated</span>
+        <strong id="defeated">0</strong>
+      </div>
+      <div class="score-card">
+        <span class="label">Rounds</span>
+        <strong id="rounds">0</strong>
+      </div>
+      <div class="score-card">
+        <span class="label">Best</span>
+        <strong id="best">0</strong>
+      </div>
+    </section>
+
+    <section class="combatants" aria-label="Combatants">
+      <article class="panel player-panel">
+        <div class="panel-title-row">
+          <h2>You</h2>
+          <span class="pill">choices</span>
+        </div>
+        <div class="stat-row">
+          <span>Health</span>
+          <strong id="playerHealthText">30 / 30</strong>
+        </div>
+        <div class="bar"><div id="playerHealthBar" class="bar-fill health"></div></div>
+        <div class="mini-stats">
+          <div><span>Shield</span><strong id="playerShield">0</strong></div>
+          <div><span>Charge</span><strong id="playerCharge">0</strong></div>
+          <div><span>Deck</span><strong id="playerDeckCount">52</strong></div>
+        </div>
+      </article>
+
+      <article class="panel enemy-panel">
+        <div class="panel-title-row">
+          <h2 id="enemyName">Enemy 1</h2>
+          <span class="pill danger">pressure</span>
+        </div>
+        <div class="stat-row">
+          <span>Health</span>
+          <strong id="enemyHealthText">40 / 40</strong>
+        </div>
+        <div class="bar"><div id="enemyHealthBar" class="bar-fill enemy"></div></div>
+        <div class="mini-stats">
+          <div><span>Shield</span><strong id="enemyShield">0</strong></div>
+          <div><span>Charge</span><strong id="enemyCharge">0</strong></div>
+          <div><span>Last</span><strong id="enemyLast">—</strong></div>
+        </div>
+      </article>
+    </section>
+
+    <section class="table panel" aria-label="Current hand">
+      <div class="panel-title-row table-title-row">
+        <div>
+          <h2>Your hand</h2>
+          <p id="turnHint" class="hint">Assign each card once: play, hold, burn and recycle.</p>
+        </div>
+        <label class="boost-toggle" id="boostWrap">
+          <input id="boostToggle" type="checkbox" />
+          <span>Boost played card with all charge</span>
+        </label>
+      </div>
+
+      <div id="cards" class="cards" aria-live="polite"></div>
+
+      <div class="actions">
+        <button class="action-button play" data-action="play">Play now</button>
+        <button class="action-button hold" data-action="hold">Hold</button>
+        <button class="action-button burn" data-action="burn">Burn</button>
+        <button class="action-button recycle" data-action="recycle">Recycle</button>
+      </div>
+
+      <div class="turn-controls">
+        <button id="undo" class="button secondary">Clear choices</button>
+        <button id="resolve" class="button primary" disabled>Resolve round</button>
+      </div>
+    </section>
+
+    <section class="panel reference" aria-label="Rules reference">
+      <h2>Suit meanings</h2>
+      <div class="suit-grid">
+        <div><span class="suit hearts">♥</span><strong>Hearts</strong><p>Heal yourself.</p></div>
+        <div><span class="suit diamonds">♦</span><strong>Diamonds</strong><p>Store charge.</p></div>
+        <div><span class="suit spades">♠</span><strong>Spades</strong><p>Build shield.</p></div>
+        <div><span class="suit clubs">♣</span><strong>Clubs</strong><p>Attack the enemy.</p></div>
+      </div>
+    </section>
+
+    <section class="panel log-panel" aria-label="Game log">
+      <div class="panel-title-row">
+        <h2>Log</h2>
+        <button id="clearLog" class="text-button">Clear</button>
+      </div>
+      <ol id="log" class="log"></ol>
+    </section>
+  </main>
+
+  <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-card">
+      <p id="modalKicker" class="eyebrow">Deck Crawl</p>
+      <h2 id="modalTitle">Ready?</h2>
+      <p id="modalText">Make your choices and survive the deck.</p>
+      <div class="modal-actions">
+        <button id="modalPrimary" class="button primary">Start</button>
+        <button id="modalSecondary" class="button secondary hidden">Restart</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
