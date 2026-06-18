@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Socceroos World Cup 2026 Forecaster | Ben's Shed</title>
+  <meta name="description" content="A Ben's Shed Socceroos-first FIFA World Cup 2026 path forecaster using manually entered results saved on this device.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="hero">
+    <div class="hero__inner">
+      <div>
+        <p class="eyebrow">Ben's Shed · bOS</p>
+        <h1>Socceroos World Cup 2026 Forecaster</h1>
+        <p class="tagline">A manual-first, tournament-form forecast of what the World Cup currently means for Australia.</p>
+      </div>
+      <div class="hero__status" id="saveStatus">
+        <span class="status-dot"></span>
+        Saved on this device
+      </div>
+    </div>
+  </header>
+
+  <main class="app-shell">
+    <section class="notice-panel" id="noticePanel">
+      <strong>Manual mode.</strong> Enter final scores as matches finish. Scores are saved in this browser on this device using localStorage. No live data fetches, no accounts, no hanging.
+    </section>
+
+    <section class="dashboard-grid" aria-label="Socceroos summary">
+      <article class="card card--feature" id="australiaCard"></article>
+      <article class="card" id="nextMatchCard"></article>
+      <article class="card" id="tournamentCard"></article>
+    </section>
+
+    <section class="section-block" id="entrySection">
+      <div class="section-title section-title--with-actions">
+        <div>
+          <p class="eyebrow">Results entry</p>
+          <h2>Enter scores</h2>
+          <p class="section-subtitle">Type both scores and tab/click away. The app saves instantly and recalculates everything.</p>
+        </div>
+        <div class="button-row">
+          <button type="button" class="secondary-button" id="showAustraliaOnly">Australia only</button>
+          <button type="button" class="secondary-button" id="showAllGroupMatches">All matches</button>
+          <button type="button" class="danger-button" id="resetStarter">Reset starter results</button>
+        </div>
+      </div>
+      <div class="entry-grid" id="scoreEntryGrid"></div>
+    </section>
+
+    <section class="section-block" id="pathSection">
+      <div class="section-title">
+        <div>
+          <p class="eyebrow">Primary output</p>
+          <h2>Socceroos path</h2>
+        </div>
+      </div>
+      <div class="path-list" id="australiaPath"></div>
+    </section>
+
+    <section class="section-block" id="scenarioSection">
+      <div class="section-title">
+        <div>
+          <p class="eyebrow">What if?</p>
+          <h2>Next Australia match scenarios</h2>
+        </div>
+      </div>
+      <div class="scenario-grid" id="scenarioGrid"></div>
+    </section>
+
+    <section class="section-block">
+      <div class="section-title">
+        <div>
+          <p class="eyebrow">Tables</p>
+          <h2>Projected groups and best thirds</h2>
+        </div>
+      </div>
+      <div class="tabs" role="tablist" aria-label="Tables">
+        <button class="tab-button active" data-tab="groups" type="button">Groups</button>
+        <button class="tab-button" data-tab="thirds" type="button">Best thirds</button>
+      </div>
+      <div id="groupsTab" class="tab-panel"></div>
+      <div id="thirdsTab" class="tab-panel hidden"></div>
+    </section>
+
+    <section class="section-block">
+      <div class="section-title">
+        <div>
+          <p class="eyebrow">Knockout simulation</p>
+          <h2>Forecast bracket</h2>
+          <p class="section-subtitle">Round of 32 third-place slots are provisionally allocated from the published slot constraints. Add the official Annexe C mapping later if this becomes critical.</p>
+        </div>
+      </div>
+      <div class="bracket-list" id="bracketList"></div>
+    </section>
+
+    <section class="section-block">
+      <div class="section-title section-title--with-actions">
+        <div>
+          <p class="eyebrow">Background data</p>
+          <h2>All matches</h2>
+        </div>
+        <div class="button-row">
+          <button type="button" id="exportButton" class="secondary-button">Export saved scores</button>
+          <label class="secondary-button file-button" for="importFile">Import scores</label>
+          <input type="file" id="importFile" accept="application/json,.json" hidden>
+          <button type="button" id="clearButton" class="danger-button">Clear all saved scores</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="matches-table">
+          <thead>
+            <tr>
+              <th>When</th>
+              <th>Stage</th>
+              <th>Teams</th>
+              <th>Result / forecast</th>
+              <th>Model range</th>
+            </tr>
+          </thead>
+          <tbody id="matchesBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section-block note-block">
+      <h2>Model notes</h2>
+      <p>Forecasts use only scores entered as completed FIFA World Cup 2026 matches. They do not use betting odds, squad strength, Elo, historical results or FIFA rankings to predict match scores.</p>
+      <p>The displayed forecast is a mean/median blend of Ben's four score components. The app also keeps the pure mean and pure median to show a rough range.</p>
+      <p>FIFA rankings are not used for prediction. They can be used later only if needed to reproduce an official FIFA tiebreak or allocation rule.</p>
+      <p id="dataSourceNote"></p>
+    </section>
+  </main>
+
+  <template id="miniTableTemplate">
+    <table class="mini-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Team</th>
+          <th>Pts</th>
+          <th>GD</th>
+          <th>GF</th>
+          <th>GA</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>
