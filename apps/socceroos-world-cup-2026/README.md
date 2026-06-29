@@ -6,7 +6,7 @@ A standalone browser app that forecasts the Socceroos' World Cup 2026 path using
 
 ## Version
 
-Manual-first V3.
+Manual-first V4.
 
 This version deliberately removes the live API dependency. The previous live-data version could hang if an external source stalled or changed. This version has the World Cup schedule baked into the app and saves scores locally in the browser.
 
@@ -32,7 +32,7 @@ Then link to:
 ## How it works
 
 - Enter final scores as matches finish.
-- Scores are saved using `localStorage` in the current browser on the current device. V3 adds an explicit **Save scores & update forecast** button so it is clear when the forecast has recalculated.
+- Scores are saved using `localStorage` in the current browser on the current device. Use **Save scores & update forecast** after entering results so it is clear when the forecast has recalculated.
 - The app recalculates group tables, best third-placed teams, the Socceroos path and knockout forecasts instantly.
 - No accounts, logins, backend, live fetches or paid services are required.
 
@@ -50,22 +50,29 @@ Use **Save scores & update forecast** after entering results. Use **Reset starte
 
 ## Forecast model
 
-For each future match, the app calculates four score components:
+The forecast model mirrors Ben's spreadsheet. For each team it calculates, from completed results only:
 
-1. Team attacking average
-2. Opponent defensive concession average
-3. Team attacking average adjusted by opponent defence
-4. Opponent concession average adjusted by team attack
+1. Average goals for
+2. Average goals against
+3. Average opponent goals against
+4. Average opponent goals for
+5. Additive scoring modifier: average goals for minus average opponent goals against
+6. Additive conceding modifier: average goals against minus average opponent goals for
+7. Percentage scoring modifier: average goals for divided by average opponent goals against
+8. Percentage conceding modifier: average goals against divided by average opponent goals for
 
-It then calculates:
+For a future match, each team's predicted goals are the median of eight components:
 
-```text
-mean = average of the four components
-median = median of the four components
-forecast = average(mean, median)
-```
+1. That team's average goals for
+2. The opponent's average goals against
+3. The opponent's average goals against again, matching the spreadsheet structure
+4. That team's average goals for again, matching the spreadsheet structure
+5. The opponent's average goals against plus that team's additive scoring modifier
+6. That team's average goals for plus the opponent's additive conceding modifier
+7. The opponent's average goals against multiplied by that team's percentage scoring modifier
+8. That team's average goals for multiplied by the opponent's percentage conceding modifier
 
-The forecast score is rounded for display. The raw/unrounded forecast is kept for tie-breaking knockout matches.
+The displayed model range is the first-to-third quartile range of those same eight components. Rounded scores are clamped to zero or higher. Raw median scores are kept for knockout tie-breaking.
 
 ## Prediction limits
 

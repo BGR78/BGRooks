@@ -221,7 +221,8 @@
 
   function buildModel(results) {
     const actualGroupMatches = GROUP_MATCHES.map(match => enrichGroupMatch(match, results));
-    const actualStats = calculateStats(actualGroupMatches.filter(m => m.isActual));
+    const actualGroupOnly = actualGroupMatches.filter(m => m.isActual);
+    const actualStats = calculateStats(actualGroupOnly);
     const projectedGroupMatches = actualGroupMatches.map(match => {
       if (match.isActual) return match;
       const forecast = forecastMatch(match.home, match.away, actualStats);
@@ -232,7 +233,7 @@
     const thirds = GROUPS.map(group => groups[group][2]).sort(compareTableRows);
     const qualifyingThirds = thirds.slice(0, 8);
     const thirdSlotAssignments = assignThirdSlots(qualifyingThirds.map(row => row.group));
-    const knockout = simulateKnockout(groups, thirdSlotAssignments, actualStats, results);
+    const knockout = simulateKnockout(groups, thirdSlotAssignments, actualGroupOnly, results);
     return { actualGroupMatches, projectedGroupMatches, actualStats, groups, currentGroups, thirds, qualifyingThirds, thirdSlotAssignments, knockout };
   }
 
@@ -245,22 +246,52 @@
   function calculateStats(matches) {
     const teams = {};
     Object.keys(TEAMS).forEach(code => {
-      teams[code] = { played: 0, gf: 0, ga: 0 };
+      teams[code] = { played: 0, gf: 0, ga: 0, opponents: [] };
     });
+
     let goals = 0;
     let played = 0;
     matches.forEach(match => {
+      if (!match?.home || !match?.away) return;
       if (!Number.isFinite(match.homeScore) || !Number.isFinite(match.awayScore)) return;
+      if (!teams[match.home] || !teams[match.away]) return;
+
       teams[match.home].played += 1;
       teams[match.home].gf += match.homeScore;
       teams[match.home].ga += match.awayScore;
+      teams[match.home].opponents.push(match.away);
+
       teams[match.away].played += 1;
       teams[match.away].gf += match.awayScore;
       teams[match.away].ga += match.homeScore;
+      teams[match.away].opponents.push(match.home);
+
       goals += match.homeScore + match.awayScore;
       played += 1;
     });
+
     const tournamentAvg = played > 0 ? goals / (played * 2) : DEFAULT_GOALS_PER_TEAM;
+
+    Object.values(teams).forEach(team => {
+      team.avgGF = team.played ? team.gf / team.played : tournamentAvg;
+      team.avgGA = team.played ? team.ga / team.played : tournamentAvg;
+    });
+
+    Object.entries(teams).forEach(([, team]) => {
+      if (!team.played || !team.opponents.length) {
+        team.oppAvgGA = tournamentAvg;
+        team.oppAvgGF = tournamentAvg;
+      } else {
+        team.oppAvgGA = average(team.opponents.map(code => teams[code]?.avgGA ?? tournamentAvg));
+        team.oppAvgGF = average(team.opponents.map(code => teams[code]?.avgGF ?? tournamentAvg));
+      }
+
+      team.attackAdd = team.avgGF - team.oppAvgGA;
+      team.defenceAdd = team.avgGA - team.oppAvgGF;
+      team.attackPct = safeRatio(team.avgGF, team.oppAvgGA);
+      team.defencePct = safeRatio(team.avgGA, team.oppAvgGF);
+    });
+
     return { teams, tournamentAvg, playedMatches: played };
   }
 
@@ -268,34 +299,60 @@
     const homeForecast = forecastGoals(home, away, stats);
     const awayForecast = forecastGoals(away, home, stats);
     return {
-      homeRaw: homeForecast.blend,
-      awayRaw: awayForecast.blend,
+      homeRaw: homeForecast.median,
+      awayRaw: awayForecast.median,
       homeMean: homeForecast.mean,
       awayMean: awayForecast.mean,
       homeMedian: homeForecast.median,
       awayMedian: awayForecast.median,
+      homeQ1: homeForecast.q1,
+      homeQ3: homeForecast.q3,
+      awayQ1: awayForecast.q1,
+      awayQ3: awayForecast.q3,
       homeComponents: homeForecast.components,
       awayComponents: awayForecast.components,
-      homeRounded: Math.max(0, Math.round(homeForecast.blend)),
-      awayRounded: Math.max(0, Math.round(awayForecast.blend))
+      homeRounded: Math.max(0, Math.round(homeForecast.median)),
+      awayRounded: Math.max(0, Math.round(awayForecast.median))
     };
   }
 
   function forecastGoals(team, opponent, stats) {
-    const teamStats = stats.teams[team] || { played: 0, gf: 0, ga: 0 };
-    const opponentStats = stats.teams[opponent] || { played: 0, gf: 0, ga: 0 };
-    const teamFor = teamStats.played ? teamStats.gf / teamStats.played : stats.tournamentAvg;
-    const opponentAgainst = opponentStats.played ? opponentStats.ga / opponentStats.played : stats.tournamentAvg;
+    const teamStats = stats.teams[team] || defaultTeamStats(stats.tournamentAvg);
+    const opponentStats = stats.teams[opponent] || defaultTeamStats(stats.tournamentAvg);
     const safeAvg = stats.tournamentAvg || DEFAULT_GOALS_PER_TEAM;
+
+    // Mirrors Ben's spreadsheet model:
+    // median of the team's scoring average, the opponent's concession average,
+    // additive modifiers, and percentage modifiers from both teams' tournament form.
     const components = [
-      teamFor,
-      opponentAgainst,
-      teamFor * (opponentAgainst / safeAvg),
-      opponentAgainst * (teamFor / safeAvg)
-    ].map(value => Number.isFinite(value) ? Math.max(0, value) : safeAvg);
+      teamStats.avgGF,
+      opponentStats.avgGA,
+      opponentStats.avgGA,
+      teamStats.avgGF,
+      opponentStats.avgGA + teamStats.attackAdd,
+      teamStats.avgGF + opponentStats.defenceAdd,
+      multiplyOrFallback(opponentStats.avgGA, teamStats.attackPct, safeAvg),
+      multiplyOrFallback(teamStats.avgGF, opponentStats.defencePct, safeAvg)
+    ].map(value => Number.isFinite(value) ? value : safeAvg);
+
     const mean = average(components);
     const med = median(components);
-    return { components, mean, median: med, blend: average([mean, med]) };
+    return {
+      components,
+      mean,
+      median: med,
+      q1: quartileInc(components, 0.25),
+      q3: quartileInc(components, 0.75)
+    };
+  }
+
+  function defaultTeamStats(tournamentAvg) {
+    const avg = Number.isFinite(tournamentAvg) ? tournamentAvg : DEFAULT_GOALS_PER_TEAM;
+    return {
+      played: 0, gf: 0, ga: 0, opponents: [],
+      avgGF: avg, avgGA: avg, oppAvgGA: avg, oppAvgGF: avg,
+      attackAdd: 0, defenceAdd: 0, attackPct: 1, defencePct: 1
+    };
   }
 
   function forecastToScoreFields(forecast) {
@@ -377,8 +434,9 @@
     return finalAssignment;
   }
 
-  function simulateKnockout(groups, thirdAssignments, actualStats, results) {
+  function simulateKnockout(groups, thirdAssignments, actualGroupMatches, results) {
     const matchResults = {};
+    const actualsForForecast = [...actualGroupMatches];
     const byId = {};
     const allMatches = ALL_KNOCKOUT.map(match => ({ ...match }));
     allMatches.forEach(match => {
@@ -391,11 +449,13 @@
       let winner = null;
       let loser = null;
       if (resolved.home && resolved.away) {
-        forecast = forecastMatch(resolved.home, resolved.away, actualStats);
+        const statsForThisMatch = calculateStats(actualsForForecast);
+        forecast = forecastMatch(resolved.home, resolved.away, statsForThisMatch);
         if (score) {
           homeScore = score[0];
           awayScore = score[1];
           isActual = true;
+          actualsForForecast.push({ home: resolved.home, away: resolved.away, homeScore, awayScore, isActual: true });
           if (homeScore !== awayScore) {
             winner = homeScore > awayScore ? resolved.home : resolved.away;
             loser = homeScore > awayScore ? resolved.away : resolved.home;
@@ -479,7 +539,7 @@
       <h2>${final?.winner ? `${teamLabel(final.winner)} to win` : 'Winner unresolved'}</h2>
       <p class="muted">Based on ${enteredCount} saved score${enteredCount === 1 ? '' : 's'} on this device.</p>
       <div class="chip-row">
-        <span class="chip">Mean/median blend</span>
+        <span class="chip">Median + quartiles</span>
         <span class="chip">Manual results</span>
         <span class="chip">AEST</span>
       </div>
@@ -781,11 +841,32 @@
     return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
   }
 
+  function quartileInc(values, percentile) {
+    const sorted = [...values].sort((a, b) => a - b);
+    if (!sorted.length) return 0;
+    if (sorted.length === 1) return sorted[0];
+    const position = (sorted.length - 1) * percentile;
+    const lower = Math.floor(position);
+    const upper = Math.ceil(position);
+    if (lower === upper) return sorted[lower];
+    return sorted[lower] + (sorted[upper] - sorted[lower]) * (position - lower);
+  }
+
+  function safeRatio(numerator, denominator) {
+    if (!Number.isFinite(numerator) || !Number.isFinite(denominator) || denominator === 0) return 1;
+    return numerator / denominator;
+  }
+
+  function multiplyOrFallback(base, multiplier, fallback) {
+    const value = base * multiplier;
+    return Number.isFinite(value) ? value : fallback;
+  }
+
   function rangeText(forecast) {
-    const homeLow = Math.min(forecast.homeMean, forecast.homeMedian);
-    const homeHigh = Math.max(forecast.homeMean, forecast.homeMedian);
-    const awayLow = Math.min(forecast.awayMean, forecast.awayMedian);
-    const awayHigh = Math.max(forecast.awayMean, forecast.awayMedian);
+    const homeLow = Math.max(0, forecast.homeQ1 ?? Math.min(forecast.homeMean, forecast.homeMedian));
+    const homeHigh = Math.max(0, forecast.homeQ3 ?? Math.max(forecast.homeMean, forecast.homeMedian));
+    const awayLow = Math.max(0, forecast.awayQ1 ?? Math.min(forecast.awayMean, forecast.awayMedian));
+    const awayHigh = Math.max(0, forecast.awayQ3 ?? Math.max(forecast.awayMean, forecast.awayMedian));
     return `Range ${homeLow.toFixed(1)}-${homeHigh.toFixed(1)} v ${awayLow.toFixed(1)}-${awayHigh.toFixed(1)}`;
   }
 
