@@ -2,7 +2,7 @@
   'use strict';
 
   const STORAGE_KEY = 'bens-shed-socceroos-wc2026-manual-results-v1';
-  const STARTER_VERSION = '2026-06-18-aest-snapshot';
+  const STARTER_VERSION = '2026-06-30-manual-bracket-v5';
   const TZ = 'Australia/Melbourne';
   const AUS = 'AUS';
   const DEFAULT_GOALS_PER_TEAM = 1.35;
@@ -70,23 +70,26 @@
     g19: [3, 0], g20: [3, 1], g21: [1, 1], g22: [4, 2], g23: [1, 0]
   };
 
+  // Confirmed Round of 32 bracket after the completed group stage.
+  // These pairings are fixed so Ben can test/edit Round of 32 outcomes without the app
+  // trying to recalculate FIFA's third-placed-team allocation.
   const ROUND32 = [
-    ko('k45', '2026-06-29T05:00:00+10:00', 'Round of 32', { rank: 2, group: 'A' }, { rank: 2, group: 'B' }, 'k11'),
-    ko('k57', '2026-06-30T03:00:00+10:00', 'Round of 32', { rank: 1, group: 'C' }, { rank: 2, group: 'F' }, 'k17'),
-    ko('k41', '2026-06-30T06:30:00+10:00', 'Round of 32', { rank: 1, group: 'E' }, { thirdSlot: 'slot41', possible: ['A', 'B', 'C', 'D', 'F'] }, 'k09'),
-    ko('k47', '2026-06-30T11:00:00+10:00', 'Round of 32', { rank: 1, group: 'F' }, { rank: 2, group: 'C' }, 'k11'),
-    ko('k61', '2026-07-01T03:00:00+10:00', 'Round of 32', { rank: 2, group: 'E' }, { rank: 2, group: 'I' }, 'k17'),
-    ko('k43', '2026-07-01T07:00:00+10:00', 'Round of 32', { rank: 1, group: 'I' }, { thirdSlot: 'slot43', possible: ['C', 'D', 'F', 'G', 'H'] }, 'k09'),
-    ko('k63', '2026-07-01T11:00:00+10:00', 'Round of 32', { rank: 1, group: 'A' }, { thirdSlot: 'slot63', possible: ['C', 'E', 'F', 'H', 'I'] }, 'k19'),
-    ko('k65', '2026-07-02T02:00:00+10:00', 'Round of 32', { rank: 1, group: 'L' }, { thirdSlot: 'slot65', possible: ['E', 'H', 'I', 'J', 'K'] }, 'k19'),
-    ko('k55', '2026-07-02T06:00:00+10:00', 'Round of 32', { rank: 1, group: 'G' }, { thirdSlot: 'slot55', possible: ['A', 'E', 'H', 'I', 'J'] }, 'k15'),
-    ko('k53', '2026-07-02T10:00:00+10:00', 'Round of 32', { rank: 1, group: 'D' }, { thirdSlot: 'slot53', possible: ['B', 'E', 'F', 'I', 'J'] }, 'k15'),
-    ko('k51', '2026-07-03T05:00:00+10:00', 'Round of 32', { rank: 1, group: 'H' }, { rank: 2, group: 'J' }, 'k13'),
-    ko('k49', '2026-07-03T09:00:00+10:00', 'Round of 32', { rank: 2, group: 'K' }, { rank: 2, group: 'L' }, 'k13'),
-    ko('k05', '2026-07-03T13:00:00+10:00', 'Round of 32', { rank: 1, group: 'B' }, { thirdSlot: 'slot05', possible: ['E', 'F', 'G', 'I', 'J'] }, 'k23'),
-    ko('k03', '2026-07-04T04:00:00+10:00', 'Round of 32', { rank: 2, group: 'D' }, { rank: 2, group: 'G' }, 'k21'),
-    ko('k69', '2026-07-04T08:00:00+10:00', 'Round of 32', { rank: 1, group: 'J' }, { rank: 2, group: 'H' }, 'k21'),
-    ko('k07', '2026-07-04T11:30:00+10:00', 'Round of 32', { rank: 1, group: 'K' }, { thirdSlot: 'slot07', possible: ['D', 'E', 'I', 'J', 'L'] }, 'k23')
+    ko('k45', '2026-06-29T05:00:00+10:00', 'Round of 32', { team: 'RSA' }, { team: 'CAN' }, 'k11'),
+    ko('k57', '2026-06-30T03:00:00+10:00', 'Round of 32', { team: 'BRA' }, { team: 'JPN' }, 'k17'),
+    ko('k41', '2026-06-30T06:30:00+10:00', 'Round of 32', { team: 'GER' }, { team: 'PAR' }, 'k09'),
+    ko('k47', '2026-06-30T11:00:00+10:00', 'Round of 32', { team: 'NED' }, { team: 'MAR' }, 'k11'),
+    ko('k61', '2026-07-01T03:00:00+10:00', 'Round of 32', { team: 'CIV' }, { team: 'NOR' }, 'k17'),
+    ko('k43', '2026-07-01T07:00:00+10:00', 'Round of 32', { team: 'FRA' }, { team: 'SWE' }, 'k09'),
+    ko('k63', '2026-07-01T11:00:00+10:00', 'Round of 32', { team: 'MEX' }, { team: 'ECU' }, 'k19'),
+    ko('k65', '2026-07-02T02:00:00+10:00', 'Round of 32', { team: 'ENG' }, { team: 'COD' }, 'k19'),
+    ko('k55', '2026-07-02T06:00:00+10:00', 'Round of 32', { team: 'BEL' }, { team: 'SEN' }, 'k15'),
+    ko('k53', '2026-07-02T10:00:00+10:00', 'Round of 32', { team: 'USA' }, { team: 'BIH' }, 'k15'),
+    ko('k51', '2026-07-03T05:00:00+10:00', 'Round of 32', { team: 'ESP' }, { team: 'AUT' }, 'k13'),
+    ko('k49', '2026-07-03T09:00:00+10:00', 'Round of 32', { team: 'POR' }, { team: 'CRO' }, 'k13'),
+    ko('k05', '2026-07-03T13:00:00+10:00', 'Round of 32', { team: 'SUI' }, { team: 'DZA' }, 'k23'),
+    ko('k03', '2026-07-04T04:00:00+10:00', 'Round of 32', { team: 'AUS' }, { team: 'EGY' }, 'k21'),
+    ko('k69', '2026-07-04T08:00:00+10:00', 'Round of 32', { team: 'ARG' }, { team: 'CPV' }, 'k21'),
+    ko('k07', '2026-07-04T11:30:00+10:00', 'Round of 32', { team: 'COL' }, { team: 'GHA' }, 'k23')
   ];
 
   const KNOCKOUT_REST = [
@@ -491,6 +494,7 @@
 
   function resolveSpec(spec, groups, thirdAssignments, matchResults) {
     if (!spec) return null;
+    if (spec.team) return spec.team;
     if (spec.rank && spec.group) return groups[spec.group]?.[spec.rank - 1]?.code || null;
     if (spec.thirdSlot) {
       const group = thirdAssignments[spec.thirdSlot];
@@ -786,7 +790,7 @@
         <td>${match.forecast ? rangeText(match.forecast) : '—'}</td>
       </tr>
     `).join('');
-    document.getElementById('dataSourceNote').textContent = `Starter snapshot: ${STARTER_VERSION}. This version has ${GROUP_MATCHES.length} group fixtures and ${ALL_KNOCKOUT.length} knockout fixtures baked into the app.`;
+    document.getElementById('dataSourceNote').textContent = `Starter snapshot: ${STARTER_VERSION}. This version has ${GROUP_MATCHES.length} group fixtures and ${ALL_KNOCKOUT.length} knockout fixtures baked into the app. The Round of 32 pairings are fixed to the confirmed bracket; Round of 32 results remain editable.`;
   }
 
   function findNextAustraliaMatch(model) {
@@ -815,6 +819,7 @@
   function teamOrPlaceholder(code, spec) {
     if (code) return teamLabel(code);
     if (!spec) return 'TBD';
+    if (spec.team) return teamLabel(spec.team);
     if (spec.rank && spec.group) return `${ordinal(spec.rank)} Group ${spec.group}`;
     if (spec.thirdSlot) return `3rd Group ${spec.possible.join('/')}`;
     if (spec.winnerOf) return `Winner of ${spec.winnerOf.toUpperCase()}`;

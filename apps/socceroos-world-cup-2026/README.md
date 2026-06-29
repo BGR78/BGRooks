@@ -80,6 +80,23 @@ Forecasts use only scores entered as completed matches in this tournament. They 
 
 ## Round of 32 note
 
-The app includes the published Round of 32 slot constraints, such as `1D v 3rd B/E/F/I/J`. It provisionally allocates qualifying third-placed teams into those slots using a matching algorithm.
+This version fixes the post-group-stage Round of 32 bracket. The app no longer tries to infer the third-place allocation from slot constraints. The confirmed Round of 32 fixtures are hard-coded, but Round of 32 scores/results are deliberately left editable so Ben can test forecast scenarios.
 
-This is useful for forecasting, but it is not a hard-coded copy of FIFA's full Annexe C 495-combination table. If Australia ends up relying on a third-place pathway or the exact Round of 32 allocation becomes critical, the next improvement should be hard-coding Annexe C.
+Confirmed Round of 32 pairings baked into v5:
+
+- South Africa v Canada
+- Brazil v Japan
+- Germany v Paraguay
+- Netherlands v Morocco
+- Ivory Coast v Norway
+- France v Sweden
+- Mexico v Ecuador
+- England v DR Congo
+- Belgium v Senegal
+- United States v Bosnia and Herzegovina
+- Spain v Austria
+- Portugal v Croatia
+- Switzerland v Algeria
+- Australia v Egypt
+- Argentina v Cape Verde
+- Colombia v Ghana
