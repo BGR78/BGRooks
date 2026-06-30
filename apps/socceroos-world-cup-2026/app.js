@@ -2,7 +2,7 @@
   'use strict';
 
   const STORAGE_KEY = 'bens-shed-socceroos-wc2026-manual-results-v1';
-  const STARTER_VERSION = '2026-06-30-manual-bracket-v5';
+  const STARTER_VERSION = '2026-07-01-manual-bracket-v7-knockout-penalties';
   const TZ = 'Australia/Melbourne';
   const AUS = 'AUS';
   const DEFAULT_GOALS_PER_TEAM = 1.35;
@@ -133,6 +133,8 @@
   }
 
   function bindControls() {
+    const refreshButton = document.getElementById('refreshAppButton');
+    if (refreshButton) refreshButton.addEventListener('click', refreshApp);
     document.getElementById('saveUpdateButton').addEventListener('click', () => saveVisibleScoreInputs({ renderAfter: true, source: 'button' }));
     window.addEventListener('beforeunload', () => {
       if (hasUnsavedInput) saveVisibleScoreInputs({ renderAfter: false, silent: true, source: 'beforeunload' });
@@ -203,11 +205,26 @@
   function normaliseResults(results) {
     const clean = {};
     Object.entries(results).forEach(([id, value]) => {
-      if (Array.isArray(value) && Number.isFinite(Number(value[0])) && Number.isFinite(Number(value[1]))) {
-        clean[id] = [Number(value[0]), Number(value[1])];
-      }
+      const result = normaliseResult(value);
+      if (result) clean[id] = result;
     });
     return clean;
+  }
+
+  function normaliseResult(value) {
+    if (Array.isArray(value) && Number.isFinite(Number(value[0])) && Number.isFinite(Number(value[1]))) {
+      return makeResult(Number(value[0]), Number(value[1]), value[2] || null);
+    }
+    if (value && typeof value === 'object' && Number.isFinite(Number(value.homeScore)) && Number.isFinite(Number(value.awayScore))) {
+      return makeResult(Number(value.homeScore), Number(value.awayScore), value.winnerSide || null);
+    }
+    return null;
+  }
+
+  function makeResult(homeScore, awayScore, winnerSide = null) {
+    const result = { homeScore: Number(homeScore), awayScore: Number(awayScore) };
+    if (winnerSide === 'home' || winnerSide === 'away') result.winnerSide = winnerSide;
+    return result;
   }
 
   function render() {
@@ -241,9 +258,9 @@
   }
 
   function enrichGroupMatch(match, results) {
-    const score = results[match.id];
-    if (!score) return { ...match, isActual: false };
-    return { ...match, homeScore: score[0], awayScore: score[1], isActual: true };
+    const result = normaliseResult(results[match.id]);
+    if (!result) return { ...match, isActual: false };
+    return { ...match, homeScore: result.homeScore, awayScore: result.awayScore, winnerSide: result.winnerSide || null, isActual: true };
   }
 
   function calculateStats(matches) {
@@ -444,27 +461,37 @@
     const allMatches = ALL_KNOCKOUT.map(match => ({ ...match }));
     allMatches.forEach(match => {
       const resolved = resolveKnockoutTeams(match, groups, thirdAssignments, matchResults);
-      const score = results[match.id];
+      const result = normaliseResult(results[match.id]);
       let forecast = null;
       let homeScore = null;
       let awayScore = null;
       let isActual = false;
       let winner = null;
       let loser = null;
+      let winnerSide = null;
+
       if (resolved.home && resolved.away) {
         const statsForThisMatch = calculateStats(actualsForForecast);
         forecast = forecastMatch(resolved.home, resolved.away, statsForThisMatch);
-        if (score) {
-          homeScore = score[0];
-          awayScore = score[1];
+        if (result) {
+          homeScore = result.homeScore;
+          awayScore = result.awayScore;
+          winnerSide = result.winnerSide || null;
           isActual = true;
           actualsForForecast.push({ home: resolved.home, away: resolved.away, homeScore, awayScore, isActual: true });
-          if (homeScore !== awayScore) {
-            winner = homeScore > awayScore ? resolved.home : resolved.away;
-            loser = homeScore > awayScore ? resolved.away : resolved.home;
-          } else {
-            winner = forecast.homeRaw >= forecast.awayRaw ? resolved.home : resolved.away;
-            loser = winner === resolved.home ? resolved.away : resolved.home;
+
+          if (homeScore > awayScore) {
+            winner = resolved.home;
+            loser = resolved.away;
+          } else if (homeScore < awayScore) {
+            winner = resolved.away;
+            loser = resolved.home;
+          } else if (winnerSide === 'home') {
+            winner = resolved.home;
+            loser = resolved.away;
+          } else if (winnerSide === 'away') {
+            winner = resolved.away;
+            loser = resolved.home;
           }
         } else {
           homeScore = forecast.homeRounded;
@@ -477,7 +504,22 @@
           loser = winner === resolved.home ? resolved.away : resolved.home;
         }
       }
-      const enriched = { ...match, home: resolved.home, away: resolved.away, unresolved: resolved.unresolved, forecast, homeScore, awayScore, isActual, isForecast: !isActual && Boolean(resolved.home && resolved.away), winner, loser };
+
+      const enriched = {
+        ...match,
+        home: resolved.home,
+        away: resolved.away,
+        unresolved: resolved.unresolved,
+        forecast,
+        homeScore,
+        awayScore,
+        winnerSide,
+        isActual,
+        isForecast: !isActual && Boolean(resolved.home && resolved.away),
+        winner,
+        loser,
+        needsPenaltyWinner: isActual && homeScore === awayScore && !winner
+      };
       byId[match.id] = enriched;
       matchResults[match.id] = { winner, loser };
     });
@@ -558,29 +600,61 @@
     const sourceMatches = entryFilter === 'all'
       ? [...GROUP_MATCHES, ...resolvedKnockout]
       : [...GROUP_MATCHES, ...resolvedKnockout].filter(match => match.home === AUS || match.away === AUS);
-    const matches = sourceMatches.sort((a, b) => new Date(a.date) - new Date(b.date));
-    grid.innerHTML = matches.map(match => {
-      const saved = state.results[match.id] || ['', ''];
-      const ausClass = match.home === AUS || match.away === AUS ? ' entry-card--australia' : '';
-      return `
-        <article class="entry-card${ausClass}" data-match-id="${match.id}">
-          <div class="entry-meta"><span>${formatDate(match.date)}</span><span>${match.stage}</span></div>
-          ${scoreInputRow(match.id, 'home', match.home, saved[0])}
-          ${scoreInputRow(match.id, 'away', match.away, saved[1])}
-        </article>
-      `;
-    }).join('');
-    grid.querySelectorAll('.score-input').forEach(input => {
+
+    const knockoutMatches = sourceMatches
+      .filter(match => match.type === 'knockout')
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
+    const groupMatches = sourceMatches
+      .filter(match => match.type === 'group')
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    const knockoutHtml = knockoutMatches.length
+      ? `<section class="entry-subsection"><h3>Knockout matches</h3><div class="entry-card-grid">${knockoutMatches.map(renderEntryCard).join('')}</div></section>`
+      : '';
+    const groupHtml = groupMatches.length
+      ? `<details class="entry-subsection entry-subsection--details"><summary><span>Group-stage matches</span><span>${groupMatches.length} match${groupMatches.length === 1 ? '' : 'es'}</span></summary><div class="entry-card-grid">${groupMatches.map(renderEntryCard).join('')}</div></details>`
+      : '';
+
+    grid.innerHTML = knockoutHtml + groupHtml;
+    grid.querySelectorAll('.score-input, .winner-side-select').forEach(input => {
       input.addEventListener('input', markInputDirty);
-      input.addEventListener('change', () => saveVisibleScoreInputs({ renderAfter: false, source: 'auto' }));
+      input.addEventListener('change', markInputDirty);
     });
+  }
+
+  function renderEntryCard(match) {
+    const saved = normaliseResult(state.results[match.id]) || {};
+    const ausClass = match.home === AUS || match.away === AUS ? ' entry-card--australia' : '';
+    const tieBreaker = match.type === 'knockout' ? knockoutWinnerSelector(match, saved) : '';
+    return `
+      <article class="entry-card${ausClass}" data-match-id="${match.id}" data-match-type="${match.type}">
+        <div class="entry-meta"><span>${formatDate(match.date)}</span><span>${match.stage}</span></div>
+        ${scoreInputRow(match.id, 'home', match.home, saved.homeScore ?? '')}
+        ${scoreInputRow(match.id, 'away', match.away, saved.awayScore ?? '')}
+        ${tieBreaker}
+      </article>
+    `;
   }
 
   function scoreInputRow(matchId, side, team, value) {
     return `
       <label class="score-row">
         <span class="score-team">${teamLabel(team)} <small>${side === 'home' ? 'Home/listed first' : 'Away/listed second'}</small></span>
-        <input class="score-input" type="number" min="0" step="1" inputmode="numeric" data-match-id="${matchId}" data-side="${side}" value="${value === '' ? '' : Number(value)}" aria-label="${TEAMS[team].name} score">
+        <input class="score-input" type="number" min="0" step="1" inputmode="numeric" data-match-id="${matchId}" data-side="${side}" value="${value === '' ? '' : Number(value)}" aria-label="${TEAMS[team]?.name || team} score">
+      </label>
+    `;
+  }
+
+  function knockoutWinnerSelector(match, saved) {
+    const value = saved.winnerSide || '';
+    return `
+      <label class="winner-row">
+        <span class="score-team">If level after extra time <small>Penalty winner / advancing side</small></span>
+        <select class="winner-side-select" data-match-id="${match.id}">
+          <option value=""${value === '' ? ' selected' : ''}>Not needed / not selected</option>
+          <option value="home"${value === 'home' ? ' selected' : ''}>${TEAMS[match.home]?.name || match.home} advanced on penalties</option>
+          <option value="away"${value === 'away' ? ' selected' : ''}>${TEAMS[match.away]?.name || match.away} advanced on penalties</option>
+        </select>
       </label>
     `;
   }
@@ -592,12 +666,11 @@
 
   function saveVisibleScoreInputs(options = {}) {
     const { renderAfter = false, silent = false, source = 'manual' } = options;
-    const cards = Array.from(document.querySelectorAll('#scoreEntryGrid [data-match-id]'));
+    const cards = Array.from(document.querySelectorAll('#scoreEntryGrid article[data-match-id]'));
     const nextResults = { ...state.results };
     const invalid = [];
     const partial = [];
-    let savedPairs = 0;
-    let clearedPairs = 0;
+    const unresolvedPenalties = [];
 
     cards.forEach(card => {
       const matchId = card.dataset.matchId;
@@ -607,10 +680,9 @@
       const homeRaw = homeInput.value.trim();
       const awayRaw = awayInput.value.trim();
       const match = MATCH_LOOKUP[matchId];
-      const label = match ? `${TEAMS[match.home]?.name || match.home || 'TBD'} v ${TEAMS[match.away]?.name || match.away || 'TBD'}` : matchId;
+      const label = entryLabel(match, matchId);
 
       if (homeRaw === '' && awayRaw === '') {
-        if (nextResults[matchId]) clearedPairs += 1;
         delete nextResults[matchId];
         return;
       }
@@ -625,8 +697,17 @@
         invalid.push(label);
         return;
       }
-      nextResults[matchId] = [home, away];
-      savedPairs += 1;
+
+      const result = makeResult(home, away);
+      if (match?.type === 'knockout' && home === away) {
+        const winnerSide = card.querySelector('.winner-side-select')?.value || '';
+        if (winnerSide === 'home' || winnerSide === 'away') {
+          result.winnerSide = winnerSide;
+        } else {
+          unresolvedPenalties.push(label);
+        }
+      }
+      nextResults[matchId] = result;
     });
 
     if (invalid.length) {
@@ -640,7 +721,11 @@
 
     if (renderAfter) {
       render();
-      updateEntryStatus(`Saved ${Object.keys(state.results).length} completed result${Object.keys(state.results).length === 1 ? '' : 's'} and updated the forecast.`);
+      if (unresolvedPenalties.length) {
+        updateEntryStatus(`Saved scores, but ${unresolvedPenalties[0]} still needs a penalty winner to progress the bracket.`, true);
+      } else {
+        updateEntryStatus(`Saved ${Object.keys(state.results).length} completed result${Object.keys(state.results).length === 1 ? '' : 's'} and updated the forecast.`);
+      }
     } else if (!silent && source !== 'auto') {
       updateEntryStatus(`Saved ${Object.keys(state.results).length} completed result${Object.keys(state.results).length === 1 ? '' : 's'} on this device.`);
     } else if (!silent && partial.length) {
@@ -648,6 +733,17 @@
     }
 
     return true;
+  }
+
+  function entryLabel(match, fallback) {
+    if (!match) return fallback;
+    const home = match.home || resolveStaticSpec(match.homeSpec) || 'TBD';
+    const away = match.away || resolveStaticSpec(match.awaySpec) || 'TBD';
+    return `${TEAMS[home]?.name || home} v ${TEAMS[away]?.name || away}`;
+  }
+
+  function resolveStaticSpec(spec) {
+    return spec?.team || null;
   }
 
   function renderAustraliaPath(model) {
@@ -675,7 +771,7 @@
         <div class="chip-row">
           <span class="chip">${statusText(match)}</span>
           ${match.forecast ? `<span class="chip">${rangeText(match.forecast)}</span>` : ''}
-          ${match.winner ? `<span class="chip">Winner: ${teamLabel(match.winner)}</span>` : ''}
+          ${winnerChip(match)}
         </div>
       </article>
     `;
@@ -770,27 +866,31 @@
         <div class="chip-row">
           <span class="chip">${statusText(match)}</span>
           ${match.forecast ? `<span class="chip">${rangeText(match.forecast)}</span>` : ''}
-          ${match.winner ? `<span class="chip">Winner: ${teamLabel(match.winner)}</span>` : '<span class="chip">Winner unresolved</span>'}
+          ${winnerChip(match) || '<span class="chip">Winner unresolved</span>'}
         </div>
       </article>
     `).join('');
   }
 
   function renderMatches(model) {
-    const rows = [
-      ...model.projectedGroupMatches,
-      ...model.knockout.allMatches
-    ].sort((a, b) => new Date(a.date) - new Date(b.date));
-    document.getElementById('matchesBody').innerHTML = rows.map(match => `
-      <tr>
+    const knockoutRows = model.knockout.allMatches.sort((a, b) => new Date(a.date) - new Date(b.date));
+    const groupRows = model.projectedGroupMatches.sort((a, b) => new Date(a.date) - new Date(b.date));
+    document.getElementById('matchesBody').innerHTML = knockoutRows.map(renderMatchRow).join('');
+    const groupArchive = document.getElementById('groupMatchesBody');
+    if (groupArchive) groupArchive.innerHTML = groupRows.map(renderMatchRow).join('');
+    document.getElementById('dataSourceNote').textContent = `Starter snapshot: ${STARTER_VERSION}. If you do not see v7 in the top-right status, your browser is still showing an older cached copy. This version has ${GROUP_MATCHES.length} group fixtures and ${ALL_KNOCKOUT.length} knockout fixtures baked into the app. Tied knockout scores can now store a penalty winner for bracket progression.`;
+  }
+
+  function renderMatchRow(match, extraClass = '') {
+    return `
+      <tr class="${extraClass}">
         <td>${formatDate(match.date)}</td>
         <td>${match.stage}</td>
         <td>${teamOrPlaceholder(match.home, match.homeSpec)} v ${teamOrPlaceholder(match.away, match.awaySpec)}</td>
-        <td>${scoreBadge(match)}<br><span class="${match.isActual ? 'status-actual' : match.isForecast ? 'status-forecast' : 'status-pending'}">${statusText(match)}</span></td>
+        <td>${scoreBadge(match)}<br><span class="${match.isActual ? 'status-actual' : match.isForecast ? 'status-forecast' : 'status-pending'}">${statusText(match)}</span>${winnerDetailLine(match)}</td>
         <td>${match.forecast ? rangeText(match.forecast) : '—'}</td>
       </tr>
-    `).join('');
-    document.getElementById('dataSourceNote').textContent = `Starter snapshot: ${STARTER_VERSION}. This version has ${GROUP_MATCHES.length} group fixtures and ${ALL_KNOCKOUT.length} knockout fixtures baked into the app. The Round of 32 pairings are fixed to the confirmed bracket; Round of 32 results remain editable.`;
+    `;
   }
 
   function findNextAustraliaMatch(model) {
@@ -811,9 +911,25 @@
   }
 
   function statusText(match) {
+    if (match.needsPenaltyWinner) return 'Actual score, penalty winner needed';
+    if (match.isActual && match.type === 'knockout' && match.homeScore === match.awayScore && match.winner) return 'Actual result, penalties';
     if (match.isActual) return 'Actual result';
     if (match.isForecast) return 'Forecast';
     return 'Pending';
+  }
+
+  function winnerChip(match) {
+    if (match.needsPenaltyWinner) return '<span class="chip chip--warning">Penalty winner needed</span>';
+    if (!match.winner) return '';
+    if (match.isActual && match.type === 'knockout' && match.homeScore === match.awayScore) {
+      return `<span class="chip">Advanced on penalties: ${teamLabel(match.winner)}</span>`;
+    }
+    return `<span class="chip">Winner: ${teamLabel(match.winner)}</span>`;
+  }
+
+  function winnerDetailLine(match) {
+    const chip = winnerChip(match);
+    return chip ? `<br><span class="match-winner-line">${chip.replace(/<[^>]+>/g, '')}</span>` : '';
   }
 
   function teamOrPlaceholder(code, spec) {
@@ -902,13 +1018,19 @@
     const status = document.getElementById('saveStatus');
     if (!status) return;
     const savedText = state.updatedAt ? `Saved ${new Intl.DateTimeFormat('en-AU', { hour: 'numeric', minute: '2-digit', timeZone: TZ }).format(new Date(state.updatedAt))}` : 'Saved on this device';
-    status.innerHTML = `<span class="status-dot"></span>${savedText}`;
+    status.innerHTML = `<span class="status-dot"></span>${savedText} · v7`;
   }
 
   function switchTab(tab) {
     document.querySelectorAll('.tab-button').forEach(button => button.classList.toggle('active', button.dataset.tab === tab));
     document.getElementById('groupsTab').classList.toggle('hidden', tab !== 'groups');
     document.getElementById('thirdsTab').classList.toggle('hidden', tab !== 'thirds');
+  }
+
+  function refreshApp() {
+    if (hasUnsavedInput) saveVisibleScoreInputs({ renderAfter: false, silent: true, source: 'refresh' });
+    const base = `${window.location.origin}${window.location.pathname}`;
+    window.location.replace(`${base}?refresh=${Date.now()}`);
   }
 
   function exportScores() {

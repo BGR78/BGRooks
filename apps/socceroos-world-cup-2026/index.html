@@ -5,7 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Socceroos World Cup 2026 Forecaster | Ben's Shed</title>
   <meta name="description" content="A Ben's Shed Socceroos-first FIFA World Cup 2026 path forecaster using manually entered results saved on this device.">
-  <link rel="stylesheet" href="style.css">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <link rel="stylesheet" href="style.css?v=20260701-v7">
 </head>
 <body>
   <header class="hero">
@@ -14,17 +17,21 @@
         <p class="eyebrow">Ben's Shed · bOS</p>
         <h1>Socceroos World Cup 2026 Forecaster</h1>
         <p class="tagline">A manual-first, tournament-form forecast of what the World Cup currently means for Australia.</p>
+        <nav class="bos-tools" aria-label="Ben's Shed app tools">
+          <a class="bos-link" href="../../index.html">← Back to Ben's Shed</a>
+          <button type="button" class="bos-link bos-link--button" id="refreshAppButton">Refresh app</button>
+        </nav>
       </div>
       <div class="hero__status" id="saveStatus">
         <span class="status-dot"></span>
-        Saved on this device
+        Saved on this device · v7
       </div>
     </div>
   </header>
 
   <main class="app-shell">
     <section class="notice-panel" id="noticePanel">
-      <strong>Manual mode.</strong> Enter final scores as matches finish. Scores are saved in this browser on this device using localStorage. No live data fetches, no accounts, no hanging.
+      <strong>Manual mode.</strong> Enter final scores as matches finish. Scores are saved in this browser on this device using localStorage. No live data fetches, no accounts, no hanging. If iPhone app mode gets sticky, use the refresh button above.
     </section>
 
     <section class="dashboard-grid" aria-label="Socceroos summary">
@@ -38,7 +45,7 @@
         <div>
           <p class="eyebrow">Results entry</p>
           <h2>Enter scores</h2>
-          <p class="section-subtitle">Type both scores, then save/update. The app stores results on this device and recalculates everything.</p>
+          <p class="section-subtitle">Type both scores, then save/update. For tied knockout games, choose which listed side advanced on penalties.</p>
         </div>
         <div class="button-row">
           <button type="button" class="primary-button" id="saveUpdateButton">Save scores & update forecast</button>
@@ -71,20 +78,21 @@
       <div class="scenario-grid" id="scenarioGrid"></div>
     </section>
 
-    <section class="section-block">
-      <div class="section-title">
-        <div>
-          <p class="eyebrow">Tables</p>
-          <h2>Projected groups and best thirds</h2>
-        </div>
-      </div>
+    <details class="section-block collapsible-section">
+      <summary>
+        <span>
+          <span class="eyebrow">Tables</span>
+          <span class="summary-title">Projected groups and best thirds</span>
+        </span>
+        <span class="summary-hint">Tap to show/hide</span>
+      </summary>
       <div class="tabs" role="tablist" aria-label="Tables">
         <button class="tab-button active" data-tab="groups" type="button">Groups</button>
         <button class="tab-button" data-tab="thirds" type="button">Best thirds</button>
       </div>
       <div id="groupsTab" class="tab-panel"></div>
       <div id="thirdsTab" class="tab-panel hidden"></div>
-    </section>
+    </details>
 
     <section class="section-block">
       <div class="section-title">
@@ -102,6 +110,7 @@
         <div>
           <p class="eyebrow">Background data</p>
           <h2>All matches</h2>
+          <p class="section-subtitle">Knockout matches are shown first. Group-stage matches are collapsed below the main list.</p>
         </div>
         <div class="button-row">
           <button type="button" id="exportButton" class="secondary-button">Export saved scores</button>
@@ -124,13 +133,30 @@
           <tbody id="matchesBody"></tbody>
         </table>
       </div>
+      <details class="archive-details" id="groupArchive">
+        <summary>Show group-stage match archive</summary>
+        <div class="table-wrap">
+          <table class="matches-table">
+            <thead>
+              <tr>
+                <th>When</th>
+                <th>Stage</th>
+                <th>Teams</th>
+                <th>Result / forecast</th>
+                <th>Model range</th>
+              </tr>
+            </thead>
+            <tbody id="groupMatchesBody"></tbody>
+          </table>
+        </div>
+      </details>
     </section>
 
     <section class="section-block note-block">
       <h2>Model notes</h2>
       <p>Forecasts use only scores entered as completed FIFA World Cup 2026 matches. They do not use betting odds, squad strength, Elo, historical results or FIFA rankings to predict match scores.</p>
       <p>The displayed forecast is the median of Ben's eight spreadsheet components: each team's scoring/conceding averages, opponent averages, additive performance modifiers, and percentage performance modifiers. The displayed range uses the first and third quartiles of those same components.</p>
-      <p>FIFA rankings are not used for prediction. The confirmed Round of 32 bracket is fixed in this version, so the app no longer tries to infer third-place allocations itself.</p>
+      <p>FIFA rankings are not used for prediction. The confirmed Round of 32 bracket is fixed in this version, so the app no longer tries to infer third-place allocations itself. In knockout draws, penalty winners affect advancement only; the tied score remains the evidence used by the forecast model.</p>
       <p id="dataSourceNote"></p>
     </section>
   </main>
@@ -151,6 +177,6 @@
     </table>
   </template>
 
-  <script src="app.js"></script>
+  <script src="app.js?v=20260701-v7"></script>
 </body>
 </html>
