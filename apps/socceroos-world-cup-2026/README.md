@@ -4,7 +4,7 @@ A Ben's Shed / bOS app for manually tracking the FIFA World Cup 2026 and forecas
 
 ## Version
 
-Manual v7, 1 July 2026.
+Manual v8, 1 July 2026.
 
 ## What this version does
 
@@ -57,3 +57,10 @@ Open:
 ```
 
 If an iPhone home-screen app shows an older version, use the in-app Refresh app button, then force-close and reopen the home-screen app if needed.
+
+
+## v8 calculation update
+
+V8 makes the forecast evidence set explicit. Saved group-stage results and saved knockout results are treated as actual match evidence. For each future fixture, the model uses the actual results entered before that fixture date. Forecast-only simulated results are still not used as evidence.
+
+The headline score remains the spreadsheet-style median forecast. The app now also displays the raw median and mean values so that smaller calculation changes are visible even when the rounded score does not move.

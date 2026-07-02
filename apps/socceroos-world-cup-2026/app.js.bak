@@ -2,7 +2,7 @@
   'use strict';
 
   const STORAGE_KEY = 'bens-shed-socceroos-wc2026-manual-results-v1';
-  const STARTER_VERSION = '2026-07-02-manual-bracket-v8-actual-evidence';
+  const STARTER_VERSION = '2026-07-01-manual-bracket-v7-knockout-penalties';
   const TZ = 'Australia/Melbourne';
   const AUS = 'AUS';
   const DEFAULT_GOALS_PER_TEAM = 1.35;
@@ -455,41 +455,10 @@
   }
 
   function simulateKnockout(groups, thirdAssignments, actualGroupMatches, results) {
-    // Two-pass approach:
-    // 1. Resolve the bracket once so we know which saved knockout scores represent real
-    //    team v team evidence.
-    // 2. Rebuild the bracket forecasts using every saved actual result that happened
-    //    before each future match, not just group-stage results and not just whatever
-    //    happened earlier in bracket traversal.
-    const preliminary = simulateKnockoutPass(groups, thirdAssignments, actualGroupMatches, results, []);
-    const actualKnockoutEvidence = preliminary.allMatches
-      .filter(match => match.isActual && match.home && match.away)
-      .map(match => ({
-        id: match.id,
-        date: match.date,
-        home: match.home,
-        away: match.away,
-        homeScore: match.homeScore,
-        awayScore: match.awayScore,
-        isActual: true,
-        type: 'knockout'
-      }));
-
-    const fullEvidence = [...actualGroupMatches, ...actualKnockoutEvidence]
-      .filter(match => Number.isFinite(match.homeScore) && Number.isFinite(match.awayScore))
-      .sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0));
-
-    const finalPass = simulateKnockoutPass(groups, thirdAssignments, actualGroupMatches, results, fullEvidence);
-    finalPass.evidenceCount = fullEvidence.length;
-    finalPass.knockoutEvidenceCount = actualKnockoutEvidence.length;
-    return finalPass;
-  }
-
-  function simulateKnockoutPass(groups, thirdAssignments, actualGroupMatches, results, fullEvidence) {
     const matchResults = {};
+    const actualsForForecast = [...actualGroupMatches];
     const byId = {};
     const allMatches = ALL_KNOCKOUT.map(match => ({ ...match }));
-
     allMatches.forEach(match => {
       const resolved = resolveKnockoutTeams(match, groups, thirdAssignments, matchResults);
       const result = normaliseResult(results[match.id]);
@@ -502,17 +471,14 @@
       let winnerSide = null;
 
       if (resolved.home && resolved.away) {
-        const evidenceForThisMatch = fullEvidence.length
-          ? evidenceBeforeMatch(fullEvidence, match)
-          : actualGroupMatches;
-        const statsForThisMatch = calculateStats(evidenceForThisMatch);
+        const statsForThisMatch = calculateStats(actualsForForecast);
         forecast = forecastMatch(resolved.home, resolved.away, statsForThisMatch);
-
         if (result) {
           homeScore = result.homeScore;
           awayScore = result.awayScore;
           winnerSide = result.winnerSide || null;
           isActual = true;
+          actualsForForecast.push({ home: resolved.home, away: resolved.away, homeScore, awayScore, isActual: true });
 
           if (homeScore > awayScore) {
             winner = resolved.home;
@@ -557,18 +523,7 @@
       byId[match.id] = enriched;
       matchResults[match.id] = { winner, loser };
     });
-
     return { allMatches: Object.values(byId), byId, matchResults };
-  }
-
-  function evidenceBeforeMatch(evidence, match) {
-    const matchTime = new Date(match.date).getTime();
-    if (!Number.isFinite(matchTime)) return evidence;
-    return evidence.filter(item => {
-      if (item.id === match.id) return false;
-      const itemTime = new Date(item.date || 0).getTime();
-      return !Number.isFinite(itemTime) || itemTime < matchTime;
-    });
   }
 
   function resolveKnockoutTeams(match, groups, thirdAssignments, matchResults) {
@@ -629,7 +584,6 @@
       <p class="eyebrow">Tournament forecast</p>
       <h2>${final?.winner ? `${teamLabel(final.winner)} to win` : 'Winner unresolved'}</h2>
       <p class="muted">Based on ${enteredCount} saved score${enteredCount === 1 ? '' : 's'} on this device.</p>
-      <p class="muted">Forecast evidence currently uses ${model.knockout.evidenceCount || model.actualGroupMatches.filter(m => m.isActual).length} actual played match${(model.knockout.evidenceCount || model.actualGroupMatches.filter(m => m.isActual).length) === 1 ? '' : 'es'}, including ${model.knockout.knockoutEvidenceCount || 0} knockout result${(model.knockout.knockoutEvidenceCount || 0) === 1 ? '' : 's'}.</p>
       <div class="chip-row">
         <span class="chip">Median + quartiles</span>
         <span class="chip">Manual results</span>
@@ -816,7 +770,7 @@
         </div>
         <div class="chip-row">
           <span class="chip">${statusText(match)}</span>
-          ${match.forecast ? `<span class="chip">${rangeText(match.forecast)}</span><span class="chip">${forecastDetailText(match.forecast)}</span>` : ''}
+          ${match.forecast ? `<span class="chip">${rangeText(match.forecast)}</span>` : ''}
           ${winnerChip(match)}
         </div>
       </article>
@@ -911,7 +865,7 @@
         </div>
         <div class="chip-row">
           <span class="chip">${statusText(match)}</span>
-          ${match.forecast ? `<span class="chip">${rangeText(match.forecast)}</span><span class="chip">${forecastDetailText(match.forecast)}</span>` : ''}
+          ${match.forecast ? `<span class="chip">${rangeText(match.forecast)}</span>` : ''}
           ${winnerChip(match) || '<span class="chip">Winner unresolved</span>'}
         </div>
       </article>
@@ -924,7 +878,7 @@
     document.getElementById('matchesBody').innerHTML = knockoutRows.map(renderMatchRow).join('');
     const groupArchive = document.getElementById('groupMatchesBody');
     if (groupArchive) groupArchive.innerHTML = groupRows.map(renderMatchRow).join('');
-    document.getElementById('dataSourceNote').textContent = `Starter snapshot: ${STARTER_VERSION}. If you do not see v8 in the top-right status, your browser is still showing an older cached copy. This version has ${GROUP_MATCHES.length} group fixtures and ${ALL_KNOCKOUT.length} knockout fixtures baked into the app. Tied knockout scores can now store a penalty winner for bracket progression.`;
+    document.getElementById('dataSourceNote').textContent = `Starter snapshot: ${STARTER_VERSION}. If you do not see v7 in the top-right status, your browser is still showing an older cached copy. This version has ${GROUP_MATCHES.length} group fixtures and ${ALL_KNOCKOUT.length} knockout fixtures baked into the app. Tied knockout scores can now store a penalty winner for bracket progression.`;
   }
 
   function renderMatchRow(match, extraClass = '') {
@@ -934,7 +888,7 @@
         <td>${match.stage}</td>
         <td>${teamOrPlaceholder(match.home, match.homeSpec)} v ${teamOrPlaceholder(match.away, match.awaySpec)}</td>
         <td>${scoreBadge(match)}<br><span class="${match.isActual ? 'status-actual' : match.isForecast ? 'status-forecast' : 'status-pending'}">${statusText(match)}</span>${winnerDetailLine(match)}</td>
-        <td>${match.forecast ? `${rangeText(match.forecast)}<br><span class="muted">${forecastDetailText(match.forecast)}</span>` : '—'}</td>
+        <td>${match.forecast ? rangeText(match.forecast) : '—'}</td>
       </tr>
     `;
   }
@@ -1037,11 +991,6 @@
     return `Range ${homeLow.toFixed(1)}-${homeHigh.toFixed(1)} v ${awayLow.toFixed(1)}-${awayHigh.toFixed(1)}`;
   }
 
-
-  function forecastDetailText(forecast) {
-    return `Median ${forecast.homeMedian.toFixed(2)}-${forecast.awayMedian.toFixed(2)} · Mean ${forecast.homeMean.toFixed(2)}-${forecast.awayMean.toFixed(2)}`;
-  }
-
   function formatDate(iso) {
     return new Intl.DateTimeFormat('en-AU', {
       weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', timeZone: TZ, timeZoneName: 'short'
@@ -1069,7 +1018,7 @@
     const status = document.getElementById('saveStatus');
     if (!status) return;
     const savedText = state.updatedAt ? `Saved ${new Intl.DateTimeFormat('en-AU', { hour: 'numeric', minute: '2-digit', timeZone: TZ }).format(new Date(state.updatedAt))}` : 'Saved on this device';
-    status.innerHTML = `<span class="status-dot"></span>${savedText} · v8`;
+    status.innerHTML = `<span class="status-dot"></span>${savedText} · v7`;
   }
 
   function switchTab(tab) {
