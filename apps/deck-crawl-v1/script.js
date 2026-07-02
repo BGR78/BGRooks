@@ -7,6 +7,7 @@
   const ranks = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
   const actionLabels = { play: "Play", hold: "Hold", burn: "Burn", recycle: "Recycle" };
   const storageKey = "deckCrawlBestDefeatedV1";
+  let cardSequence = 0;
 
   const els = {
     cards: document.getElementById("cards"),
@@ -46,6 +47,7 @@
   let selectedAction = "play";
 
   function freshState() {
+    cardSequence = 0;
     return {
       active: true,
       wave: 1,
@@ -65,6 +67,7 @@
       },
       enemy: buildEnemy(1),
       enemyDeck: shuffle(buildDeck()),
+      enemyIntent: null,
       assignments: {},
       messageQueue: [],
     };
@@ -84,8 +87,12 @@
   }
 
   function buildDeck() {
-    let id = 0;
-    return suits.flatMap((suit) => ranks.map((rank) => ({ id: `${suit}-${rank}-${id++}`, suit, rank })));
+    return suits.flatMap((suit) => ranks.map((rank) => ({
+      id: `card-${cardSequence++}`,
+      faceId: `${suit}-${rank}`,
+      suit,
+      rank,
+    })));
   }
 
   function shuffle(array) {
@@ -119,6 +126,7 @@
     selectedAction = "play";
     log("New run started. Defeat as many enemies as you can.");
     drawHand();
+    prepareEnemyIntent();
     render();
     hideModal();
   }
@@ -127,6 +135,7 @@
     state.wave += 1;
     state.enemy = buildEnemy(state.wave);
     state.enemyDeck = shuffle(buildDeck());
+    state.enemyIntent = null;
     state.player.deck = shuffle(buildDeck());
     state.player.held = null;
     state.player.hand = [];
@@ -137,6 +146,7 @@
     state.player.health += healAmount;
     log(`You catch your breath and recover ${healAmount} health. A stronger enemy appears.`);
     drawHand();
+    prepareEnemyIntent();
     render();
     hideModal();
   }
@@ -156,6 +166,15 @@
     }
     state.player.hand = hand;
     state.assignments = {};
+  }
+
+  function prepareEnemyIntent() {
+    if (state.enemyIntent) return;
+    if (state.enemyDeck.length === 0) {
+      state.enemyDeck = shuffle(buildDeck());
+      log("Enemy deck is empty. The enemy shuffles a fresh deck.");
+    }
+    state.enemyIntent = state.enemyDeck.pop();
   }
 
   function chooseAction(action) {
@@ -214,6 +233,7 @@
     }
 
     drawHand();
+    prepareEnemyIntent();
     els.boostToggle.checked = false;
     render();
   }
@@ -268,15 +288,19 @@
   }
 
   function enemyTurn() {
-    if (state.enemyDeck.length === 0) state.enemyDeck = shuffle(buildDeck());
-    const card = state.enemyDeck.pop();
-    const shouldBoost = card.suit !== "diamonds" && state.enemy.charge > 0 && (
+    prepareEnemyIntent();
+    const card = state.enemyIntent;
+    state.enemyIntent = null;
+    const shouldBoost = enemyShouldBoost(card);
+    resolveCard("enemy", card, shouldBoost);
+  }
+
+  function enemyShouldBoost(card) {
+    return card.suit !== "diamonds" && state.enemy.charge > 0 && (
       card.suit === "clubs" ||
       (card.suit === "hearts" && state.enemy.health <= state.enemy.maxHealth * 0.7) ||
       (card.suit === "spades" && state.enemy.shield <= state.enemy.maxShield * 0.45)
     );
-    els.enemyLast.textContent = cardLabel(card);
-    resolveCard("enemy", card, shouldBoost);
   }
 
   function defeatEnemy() {
@@ -344,6 +368,12 @@
     els.enemyHealthBar.style.width = `${(state.enemy.health / state.enemy.maxHealth) * 100}%`;
     els.enemyShield.textContent = `${state.enemy.shield} / ${state.enemy.maxShield}`;
     els.enemyCharge.textContent = `${state.enemy.charge} / ${state.enemy.maxCharge}`;
+    if (state.enemyIntent) {
+      const boostNote = enemyShouldBoost(state.enemyIntent) ? ` +${state.enemy.charge}` : "";
+      els.enemyLast.textContent = `${cardLabel(state.enemyIntent)}${boostNote}`;
+    } else {
+      els.enemyLast.textContent = "—";
+    }
 
     const playCard = state.player.hand.find((card) => state.assignments[card.id] === "play");
     const canBoost = state.player.charge > 0 && playCard && playCard.suit !== "diamonds";
@@ -387,7 +417,7 @@
     els.resolve.disabled = !isReadyToResolve() || !state.active;
     const missing = ["play", "hold", "burn", "recycle"].filter((action) => !Object.values(state.assignments).includes(action));
     els.turnHint.textContent = missing.length
-      ? `Select an action, then tap a card. Still needed: ${missing.map((m) => actionLabels[m]).join(", ")}.`
+      ? `Choose a slot above, then tap a card. Still needed: ${missing.map((m) => actionLabels[m]).join(", ")}.`
       : "Ready. Resolve the round when you’re happy with the choices.";
   }
 
@@ -437,13 +467,17 @@
     state.messageQueue = [];
     renderLog();
   });
+  els.modalPrimary.addEventListener("click", startGame);
+  els.modalSecondary.addEventListener("click", startGame);
+
   state = freshState();
   drawHand();
+  prepareEnemyIntent();
   render();
   showModal({
     kicker: "Deck Crawl V1",
     title: "Ready to crawl?",
-    text: "Each round, assign one card to play, one to hold, one to burn and one to recycle. Hearts heal, diamonds store charge, spades shield, clubs attack. Survive as many enemies as you can.",
+    text: "Each round, assign one card to play, one to hold, one to burn and one to recycle. The enemy’s next card is visible, so plan around it. Hearts heal, diamonds store charge, spades shield, clubs attack.",
     primary: "Start run",
     onPrimary: startGame,
     secondary: null,

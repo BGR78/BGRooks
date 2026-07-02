@@ -89,7 +89,7 @@ h2 {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 12px;
-  margin: 18px 0;
+  margin: 12px 0 18px;
 }
 
 .score-card {
@@ -436,4 +436,25 @@ h2 {
   .card-rank { font-size: 2.45rem; }
   .card-suit { font-size: 1.85rem; }
   .turn-controls, .modal-actions { flex-direction: column; }
+}
+
+.choice-slots {
+  margin: 18px 0 12px;
+}
+
+.choice-slots .action-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.choice-slots .action-button span {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  font-size: 0.78rem;
 }

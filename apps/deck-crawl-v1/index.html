@@ -67,7 +67,7 @@
         <div class="mini-stats">
           <div><span>Shield</span><strong id="enemyShield">0</strong></div>
           <div><span>Charge</span><strong id="enemyCharge">0</strong></div>
-          <div><span>Last</span><strong id="enemyLast">—</strong></div>
+          <div><span>Next</span><strong id="enemyLast">—</strong></div>
         </div>
       </article>
     </section>
@@ -84,14 +84,14 @@
         </label>
       </div>
 
-      <div id="cards" class="cards" aria-live="polite"></div>
-
-      <div class="actions">
-        <button class="action-button play" data-action="play">Play now</button>
-        <button class="action-button hold" data-action="hold">Hold</button>
-        <button class="action-button burn" data-action="burn">Burn</button>
-        <button class="action-button recycle" data-action="recycle">Recycle</button>
+      <div class="actions choice-slots" aria-label="Choose what each card will do">
+        <button class="action-button play" data-action="play"><span>1</span>Play now</button>
+        <button class="action-button hold" data-action="hold"><span>2</span>Hold</button>
+        <button class="action-button burn" data-action="burn"><span>3</span>Burn</button>
+        <button class="action-button recycle" data-action="recycle"><span>4</span>Recycle</button>
       </div>
+
+      <div id="cards" class="cards" aria-live="polite"></div>
 
       <div class="turn-controls">
         <button id="undo" class="button secondary">Clear choices</button>

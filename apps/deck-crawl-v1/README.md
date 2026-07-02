@@ -1,37 +1,42 @@
-# Deck Crawl V1
+# Deck Crawl V1.1
 
-A tiny browser card duel built for GitHub Pages.
+A small browser-based card duel built for GitHub Pages.
 
 ## How to play
 
-Each round you see four cards. Assign one card to each action:
+Each round you see four cards. Use the action slots above the hand to assign exactly one card to each action:
 
-- **Play now**: resolve this card immediately.
-- **Hold**: carry this card into the next round.
-- **Burn**: remove this card from the current deck.
-- **Recycle**: shuffle this card randomly back into the current deck.
+1. **Play now**: resolves the card immediately.
+2. **Hold**: carries the card into the next round.
+3. **Burn**: removes the card from this run.
+4. **Recycle**: shuffles the card back into your draw pile.
+
+The enemy's next card is visible, so you can plan around the incoming pressure.
 
 ## Suit meanings
 
-- **Hearts** heal you.
+- **Hearts** heal.
 - **Diamonds** store charge.
 - **Spades** build shield.
-- **Clubs** attack the enemy.
-
-Card values are 2-10 as shown, Jack = 11, Queen = 12, King = 13. Aces resolve as either 1 or 14 when played.
+- **Clubs** attack.
 
 Diamonds are stored as charge. When playing a heart, spade or club, you can choose to spend all stored charge to boost that card.
 
-## Win / lose
+## Card values
 
-Defeat as many enemies as possible before your health reaches 0. After each defeated enemy, you start the next duel with a fresh deck, current health, no shield and no charge.
+- 2 to 10 are worth their number.
+- Jack = 11.
+- Queen = 12.
+- King = 13.
+- Ace randomly resolves as either 1 or 14 when played.
 
-## GitHub Pages setup
+## Win condition
 
-Put these files in a folder such as `/apps/deck-crawl/` in your GitHub Pages repository:
+Defeat as many enemies as possible before your health reaches zero. After each enemy, you continue with your current health, regain a little health, lose shield and charge, and face a stronger enemy with a fresh deck.
 
-- `index.html`
-- `styles.css`
-- `script.js`
+## V1.1 changes
 
-Then open the folder URL in your browser.
+- Fixed duplicate visible cards breaking selections by giving every physical card a unique instance ID.
+- Moved the action choices above the cards for a more natural top-to-bottom selection flow.
+- Made the enemy's next card visible before you choose, reducing the sense that the enemy is purely random.
+- Clarified deck refresh behaviour in the game log.
